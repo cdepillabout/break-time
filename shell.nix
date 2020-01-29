@@ -27,6 +27,7 @@ stdenv.mkDerivation {
   buildInputs = [
     # Example Run-time Additional Dependencies
     openssl
+    xorg.libxcb
   ];
 
   # Set Environment Variables
