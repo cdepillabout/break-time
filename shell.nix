@@ -30,6 +30,11 @@ stdenv.mkDerivation {
     xorg.libxcb
   ];
 
+  shellHook = ''
+    # TODO: This clobbers MANPATH if it is already set.
+    export MANPATH=":${xorg.libxcb.man}/share/man"
+  '';
+
   # Set Environment Variables
   #RUST_BACKTRACE = 1;
 }
