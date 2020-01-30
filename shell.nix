@@ -21,11 +21,9 @@ stdenv.mkDerivation {
     # $ rustup component add clippy
     rustup
 
-    # Example Build-time Additional Dependencies
     pkgconfig
   ];
   buildInputs = [
-    # Example Run-time Additional Dependencies
     openssl
     xorg.libxcb
   ];
