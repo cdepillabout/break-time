@@ -107,7 +107,7 @@ fn main() {
                         /* We draw the arcs */
                         xcb::poly_arc(&conn, win, foreground, &arcs);
 
-                        xcb::grab_keyboard(&conn, true, win, xcb::CURRENT_TIME, xcb::GRAB_MODE_SYNC as u8, xcb::GRAB_MODE_SYNC as u8);
+                        xcb::grab_keyboard(&conn, true, win, xcb::CURRENT_TIME, xcb::GRAB_MODE_ASYNC as u8, xcb::GRAB_MODE_ASYNC as u8);
 
                         /* We flush the request */
                         conn.flush();
@@ -115,7 +115,9 @@ fn main() {
                     xcb::KEY_PRESS => {
                         let key_press: &xcb::KeyPressEvent = unsafe { xcb::cast_event(&event) };
                         println!("Key '{}' pressed", key_press.detail());
-                        break;
+                        if key_press.detail() == 0x18 {
+                            break;
+                        }
                     }
                     xcb::GRAB_SERVER => {
                         println!("Grabbed the server!");
