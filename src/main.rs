@@ -27,8 +27,11 @@ fn main() {
     ];
 
     let (conn, screen_num) = xcb::Connection::connect(None).unwrap();
-    let setup = conn.get_setup();
-    let screen = setup.roots().nth(screen_num as usize).unwrap();
+    let setup: xcb::Setup = conn.get_setup();
+    let mut roots: xcb::ScreenIterator = setup.roots();
+    let screen = roots.nth(screen_num as usize).unwrap();
+
+    println!("There are {} screens.", setup.roots().count());
 
     let foreground = conn.generate_id();
 
@@ -70,6 +73,7 @@ fn main() {
         let event = conn.wait_for_event();
         match event {
             None => {
+                println!("Got a None response from conn.wait_for_event(), exiting...");
                 break;
             }
             Some(event) => {
@@ -103,6 +107,8 @@ fn main() {
                         /* We draw the arcs */
                         xcb::poly_arc(&conn, win, foreground, &arcs);
 
+                        xcb::grab_keyboard(&conn, true, win, xcb::CURRENT_TIME, xcb::GRAB_MODE_SYNC as u8, xcb::GRAB_MODE_SYNC as u8);
+
                         /* We flush the request */
                         conn.flush();
                     }
@@ -111,7 +117,15 @@ fn main() {
                         println!("Key '{}' pressed", key_press.detail());
                         break;
                     }
-                    _ => {}
+                    xcb::GRAB_SERVER => {
+                        println!("Grabbed the server!");
+                    }
+                    // xcb::GRAB_STATUS_SUCCESS => {
+                    //     println!("Successfully grabbed the keyboard!");
+                    // }
+                    x => {
+                        println!("Got event: {}", x);
+                    }
                 }
             }
         }
