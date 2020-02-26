@@ -1,4 +1,5 @@
-extern crate xcb;
+
+use xcb::randr;
 
 fn main() {
     let points: &[xcb::Point] = &[
@@ -67,6 +68,52 @@ fn main() {
         ],
     );
     xcb::map_window(&conn, win);
+
+    let screen_resources = randr::get_screen_resources_current(&conn, win).get_reply().unwrap();
+    let outputs = screen_resources.outputs();
+    let crtcs = screen_resources.crtcs();
+    dbg!(outputs, crtcs);
+
+    for &output in outputs {
+        // TODO: this should probably be the timestamp returned the call to get_screen_resources_current
+        let timestamp = xcb::CURRENT_TIME;
+
+        let output_info =
+            randr::get_output_info(&conn, output, timestamp).get_reply().unwrap();
+
+        let output_conn = output_info.connection() as u32;
+        let output_crtc = output_info.crtc();
+
+        if output_conn == randr::CONNECTION_DISCONNECTED || output_crtc == xcb::NONE {
+            continue;
+        }
+        dbg!(output, output_conn, output_crtc);
+
+        let crtc_info = randr::get_crtc_info(&conn, output_crtc, timestamp).get_reply().unwrap();
+
+        dbg!(crtc_info.status(), crtc_info.x(), crtc_info.y(), crtc_info.width(), crtc_info.height());
+    }
+
+
+    // xcb_randr_get_screen_resources_current_reply_t *reply = xcb_randr_get_screen_resources_current_reply(
+    //     connection, xcb_randr_get_screen_resources_current(connection, root), NULL);
+
+// xcb_timestamp_t timestamp = reply->config_timestamp;
+// int len = xcb_randr_get_screen_resources_current_outputs_length(reply);
+// xcb_randr_output_t *randr_outputs = xcb_randr_get_screen_resources_current_outputs(reply);
+// for (int i = 0; i < len; i++) {
+    // xcb_randr_get_output_info_reply_t *output = xcb_randr_get_output_info_reply(
+    //         connection, xcb_randr_get_output_info(connection, randr_outputs[i], timestamp), NULL);
+    // if (output == NULL)
+    //     continue;
+
+    // if (output->crtc == XCB_NONE || output->connection == XCB_RANDR_CONNECTION_DISCONNECTED)
+    //     continue;
+
+    // xcb_randr_get_crtc_info_reply_t *crtc = xcb_randr_get_crtc_info_reply(connection,
+    //         xcb_randr_get_crtc_info(connection, output->crtc, timestamp), NULL);
+
+
     conn.flush();
 
     loop {
