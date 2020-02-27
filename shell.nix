@@ -17,9 +17,18 @@ stdenv.mkDerivation {
     rustup
 
     pkgconfig
+
+    # For creating the UI.
+    gnome3.glade
   ];
   buildInputs = [
     openssl
+
+    # GTK libraries
+    glib
+    gtk3
+
+    # Xorg libraries
     xorg.libxcb
   ];
 
