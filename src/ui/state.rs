@@ -1,9 +1,10 @@
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 use super::builder;
 use super::prelude::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
-    Display(ExecNixStoreRes),
+    Display,
 }
 
 #[derive(Clone, Debug)]
@@ -31,7 +32,7 @@ impl State {
     pub fn write_presses_remaining(&self, new_presses_remaining: u32) {
         let state_presses_remaining: &mut u32 =
             &mut *self.presses_remaining.write().unwrap();
-        *state_option_nix_store_res = Some(new_nix_store_res);
+        *state_presses_remaining = new_presses_remaining;
     }
 
     pub fn get_app_win(&self) -> gtk::ApplicationWindow {

@@ -1,6 +1,20 @@
 mod builder;
 mod css;
+mod prelude;
 mod state;
+
+use glib::clone;
+
+use prelude::*;
+use state::{Message, State};
+
+fn handle_msg_recv(state: &State, msg: Message) {
+    // enable(state);
+
+    match msg {
+        Message::Display => (),
+    }
+}
 
 fn app_activate(app: gtk::Application) {
     let (sender, receiver) =
@@ -24,8 +38,8 @@ fn app_activate(app: gtk::Application) {
     );
 
     // Do the initial search and display the results.
-    let opts = crate::opts::Opts::parse_from_args();
-    search_for(&state, &opts.nix_store_path);
+    // let opts = crate::opts::Opts::parse_from_args();
+    // search_for(&state, &opts.nix_store_path);
 }
 
 pub fn run() {
