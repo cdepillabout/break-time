@@ -94,26 +94,6 @@ fn main() {
         dbg!(crtc_info.status(), crtc_info.x(), crtc_info.y(), crtc_info.width(), crtc_info.height());
     }
 
-
-    // xcb_randr_get_screen_resources_current_reply_t *reply = xcb_randr_get_screen_resources_current_reply(
-    //     connection, xcb_randr_get_screen_resources_current(connection, root), NULL);
-
-// xcb_timestamp_t timestamp = reply->config_timestamp;
-// int len = xcb_randr_get_screen_resources_current_outputs_length(reply);
-// xcb_randr_output_t *randr_outputs = xcb_randr_get_screen_resources_current_outputs(reply);
-// for (int i = 0; i < len; i++) {
-    // xcb_randr_get_output_info_reply_t *output = xcb_randr_get_output_info_reply(
-    //         connection, xcb_randr_get_output_info(connection, randr_outputs[i], timestamp), NULL);
-    // if (output == NULL)
-    //     continue;
-
-    // if (output->crtc == XCB_NONE || output->connection == XCB_RANDR_CONNECTION_DISCONNECTED)
-    //     continue;
-
-    // xcb_randr_get_crtc_info_reply_t *crtc = xcb_randr_get_crtc_info_reply(connection,
-    //         xcb_randr_get_crtc_info(connection, output->crtc, timestamp), NULL);
-
-
     conn.flush();
 
     loop {
