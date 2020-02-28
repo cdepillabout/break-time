@@ -4,6 +4,7 @@ mod prelude;
 mod state;
 
 use glib::clone;
+use gtk::Inhibit;
 
 use prelude::*;
 use state::{Message, State};
@@ -13,6 +14,14 @@ fn handle_msg_recv(state: &State, msg: Message) {
 
     match msg {
         Message::Display => (),
+    }
+}
+
+fn decrement_presses_remaining(state: &State) {
+    let remaining = state.decrement_presses_remaining();
+
+    if remaining == 0 {
+        state.app.quit();
     }
 }
 
@@ -26,6 +35,16 @@ fn app_activate(app: gtk::Application) {
     window.set_application(Some(&state.app));
 
     css::setup(window.upcast_ref());
+
+    window.connect_key_press_event(clone!(@strong state => move |_, event_key| {
+        if event_key.get_keyval() == gdk::enums::key::space {
+            println!("Got key press event for space: {:?}", event_key);
+            decrement_presses_remaining(&state);
+            Inhibit(true)
+        } else {
+            Inhibit(false)
+        }
+    }));
 
     window.show_all();
 
