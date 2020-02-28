@@ -60,7 +60,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="remaining_presses_label">
+          <object class="GtkLabel" id="presses_remaining_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
           </object>

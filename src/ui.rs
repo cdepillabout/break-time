@@ -25,27 +25,47 @@ fn decrement_presses_remaining(state: &State) {
     }
 }
 
-fn app_activate(app: gtk::Application) {
-    let (sender, receiver) =
-        glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
-
-    let state = State::new(app, sender);
-
+fn setup(state: &State) {
     let window: gtk::ApplicationWindow = state.get_app_win();
     window.set_application(Some(&state.app));
 
     css::setup(window.upcast_ref());
+}
 
+fn connect_events(state: &State) {
+    let window: gtk::ApplicationWindow = state.get_app_win();
     window.connect_key_press_event(clone!(@strong state => move |_, event_key| {
         if event_key.get_keyval() == gdk::enums::key::space {
-            println!("Got key press event for space: {:?}", event_key);
             decrement_presses_remaining(&state);
+            redisplay(&state);
             Inhibit(true)
         } else {
             Inhibit(false)
         }
     }));
 
+}
+
+fn redisplay(state: &State) {
+    let presses_remaining_label = state.get_presses_remaining_label();
+
+    let presses_remaining = state.read_presses_remaining();
+    presses_remaining_label.set_text(&format!("{}", presses_remaining));
+}
+
+fn app_activate(app: gtk::Application) {
+    let (sender, receiver) =
+        glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
+
+    let state = State::new(app, sender);
+
+    setup(&state);
+
+    connect_events(&state);
+
+    redisplay(&state);
+
+    let window: gtk::ApplicationWindow = state.get_app_win();
     window.show_all();
 
     receiver.attach(
