@@ -5,6 +5,7 @@ mod state;
 
 use glib::clone;
 use gtk::Inhibit;
+use std::time::{Duration, Instant};
 
 use prelude::*;
 use state::{Message, State};
@@ -44,6 +45,28 @@ fn connect_events(state: &State) {
         }
     }));
 
+    gtk::timeout_add(200, clone!(@strong state => move || {
+        let time_remaining_label = state.get_time_remaining_label();
+
+        let now = Instant::now();
+        let time_diff = now.saturating_duration_since(state.start_instant);
+
+        // the full time we want to wait for
+        let full_time = Duration::new(20, 0);
+
+        let option_time_remaining = full_time.checked_sub(time_diff);
+
+        match option_time_remaining {
+            None => {
+                state.app.quit();
+            }
+            Some(time_remaining) => {
+                time_remaining_label.set_text(&format!("{:?}", time_remaining));
+            }
+        }
+
+        glib::source::Continue(true)
+    }));
 }
 
 fn redisplay(state: &State) {

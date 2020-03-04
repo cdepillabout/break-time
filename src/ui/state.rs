@@ -1,4 +1,5 @@
 use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::time::Instant;
 use super::builder;
 use super::prelude::*;
 
@@ -13,6 +14,7 @@ pub struct State {
     pub builder: gtk::Builder,
     pub sender: glib::Sender<Message>,
     pub presses_remaining: Arc<RwLock<u32>>,
+    pub start_instant: Instant,
 }
 
 impl State {
@@ -22,6 +24,7 @@ impl State {
             builder: builder::create(),
             sender,
             presses_remaining: Arc::new(RwLock::new(2)),
+            start_instant: Instant::now(),
         }
     }
 
