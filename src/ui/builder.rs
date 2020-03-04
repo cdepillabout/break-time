@@ -1,3 +1,4 @@
+#[allow(clippy::module_name_repetitions)]
 pub trait BuilderExtManualGetObjectExpect {
     fn get_object_expect<T: glib::object::IsA<glib::object::Object>>(
         &self,
