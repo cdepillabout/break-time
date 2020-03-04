@@ -29,8 +29,10 @@ fn decrement_presses_remaining(state: &State) {
 fn setup(state: &State) {
     let window: gtk::ApplicationWindow = state.get_app_win();
     window.set_application(Some(&state.app));
+    window.fullscreen();
 
     css::setup(window.upcast_ref());
+
 }
 
 fn connect_events(state: &State) {
