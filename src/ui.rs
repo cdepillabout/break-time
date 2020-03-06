@@ -27,28 +27,27 @@ fn decrement_presses_remaining(state: &State) {
 }
 
 fn setup(state: &State) {
-    let window: gtk::ApplicationWindow = state.get_app_win();
-    window.set_application(Some(&state.app));
-    window.fullscreen();
-
-    css::setup(window.upcast_ref());
-
+    for window in state.get_app_wins() {
+        window.set_application(Some(&state.app));
+        window.fullscreen();
+        css::setup(window.upcast_ref());
+    };
 }
 
 fn connect_events(state: &State) {
-    let window: gtk::ApplicationWindow = state.get_app_win();
-    window.connect_key_press_event(clone!(@strong state => move |_, event_key| {
-        if event_key.get_keyval() == gdk::enums::key::space {
-            decrement_presses_remaining(&state);
-            redisplay(&state);
-            Inhibit(true)
-        } else {
-            Inhibit(false)
-        }
-    }));
+    for window in state.get_app_wins() {
+        window.connect_key_press_event(clone!(@strong state => move |_, event_key| {
+            if event_key.get_keyval() == gdk::enums::key::space {
+                decrement_presses_remaining(&state);
+                redisplay(&state);
+                Inhibit(true)
+            } else {
+                Inhibit(false)
+            }
+        }));
+    }
 
     gtk::timeout_add(200, clone!(@strong state => move || {
-        let time_remaining_label = state.get_time_remaining_label();
 
         let now = Instant::now();
         let time_diff = now.saturating_duration_since(state.start_instant);
@@ -63,7 +62,9 @@ fn connect_events(state: &State) {
                 state.app.quit();
             }
             Some(time_remaining) => {
-                time_remaining_label.set_text(&format!("{:?}", time_remaining));
+                for label in state.get_time_remaining_labels() {
+                    label.set_text(&format!("{:?}", time_remaining));
+                }
             }
         }
 
@@ -72,17 +73,21 @@ fn connect_events(state: &State) {
 }
 
 fn redisplay(state: &State) {
-    let presses_remaining_label = state.get_presses_remaining_label();
-
     let presses_remaining = state.read_presses_remaining();
-    presses_remaining_label.set_text(&format!("{}", presses_remaining));
+
+    for label in state.get_presses_remaining_labels() {
+        label.set_text(&format!("{}", presses_remaining));
+    }
 }
 
 fn app_activate(app: gtk::Application) {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let state = State::new(app, sender);
+    let default_display = gdk::Display::get_default().expect("gtk should always find a Display when it runs");
+    let monitors = usize::try_from(default_display.get_n_monitors()).unwrap_or(0);
+
+    let state = State::new(app, sender, monitors);
 
     setup(&state);
 
@@ -90,8 +95,9 @@ fn app_activate(app: gtk::Application) {
 
     redisplay(&state);
 
-    let window: gtk::ApplicationWindow = state.get_app_win();
-    window.show_all();
+    for window in state.get_app_wins() {
+        window.show_all();
+    }
 
     receiver.attach(
         None,
