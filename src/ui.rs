@@ -84,10 +84,7 @@ fn app_activate(app: gtk::Application) {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let default_display = gdk::Display::get_default().expect("gtk should always find a Display when it runs");
-    let monitors = usize::try_from(default_display.get_n_monitors()).unwrap_or(0);
-
-    let state = State::new(app, sender, monitors);
+    let state = State::new(app, sender);
 
     setup(&state);
 
