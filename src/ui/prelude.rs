@@ -5,4 +5,3 @@ pub use gtk::prelude::*;
 pub use std::convert::TryFrom;
 
 pub use super::builder::BuilderExtManualGetObjectExpect;
-

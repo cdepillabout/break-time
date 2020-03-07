@@ -1,4 +1,3 @@
-
 use super::prelude::*;
 
 pub fn setup(window: &gtk::Window) {

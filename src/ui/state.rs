@@ -1,13 +1,12 @@
-use std::sync::{Arc, RwLock, RwLockReadGuard};
-use std::time::Instant;
 use super::builder;
 use super::prelude::*;
+use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::time::Instant;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Display,
 }
-
 
 #[derive(Clone, Debug)]
 pub struct Monitor {
@@ -17,23 +16,26 @@ pub struct Monitor {
 
 impl Monitor {
     pub fn new(id: i32, monitor: gdk::Monitor) -> Self {
-        Monitor {
-            id,
-            monitor,
-        }
+        Monitor { id, monitor }
     }
 
     pub fn new_from_id(default_display: gdk::Display, id: i32) -> Self {
-        let mon = default_display.get_monitor(id).expect(&format!("Could not get monitor for monitor index {:?}", id));
+        let mon = default_display.get_monitor(id).expect(&format!(
+            "Could not get monitor for monitor index {:?}",
+            id
+        ));
         Self::new(id, mon)
     }
 
     pub fn all() -> Vec<Self> {
-        let default_display = gdk::Display::get_default().expect("gtk should always find a Display when it runs");
+        let default_display = gdk::Display::get_default()
+            .expect("gtk should always find a Display when it runs");
         let num_monitors = default_display.get_n_monitors();
-        (0..num_monitors).map(|monitor_index| {
-            Self::new_from_id(default_display.clone(), monitor_index)
-        }).collect()
+        (0..num_monitors)
+            .map(|monitor_index| {
+                Self::new_from_id(default_display.clone(), monitor_index)
+            })
+            .collect()
     }
 }
 
@@ -63,11 +65,12 @@ pub struct State {
 
 impl State {
     pub fn new(app: gtk::Application, sender: glib::Sender<Message>) -> Self {
-
         let monitors = Monitor::all();
         let monitors_num = monitors.len();
 
-        let builders = std::iter::repeat_with(builder::create).take(monitors_num).collect();
+        let builders = std::iter::repeat_with(builder::create)
+            .take(monitors_num)
+            .collect();
 
         State {
             app,
@@ -96,21 +99,35 @@ impl State {
     }
 
     pub fn get_app_wins(&self) -> Vec<gtk::ApplicationWindow> {
-        self.builders.iter().map(|builder| builder.get_object_expect("app_win")).collect()
+        self.builders
+            .iter()
+            .map(|builder| builder.get_object_expect("app_win"))
+            .collect()
     }
 
-    pub fn get_app_wins_with_monitors(&self) -> Vec<(gtk::ApplicationWindow, Monitor)> {
-        self.builders.iter().zip(&self.monitors).map(|(builder, monitor)| {
-            (builder.get_object_expect("app_win"), monitor.clone())
-        }).collect()
+    pub fn get_app_wins_with_monitors(
+        &self,
+    ) -> Vec<(gtk::ApplicationWindow, Monitor)> {
+        self.builders
+            .iter()
+            .zip(&self.monitors)
+            .map(|(builder, monitor)| {
+                (builder.get_object_expect("app_win"), monitor.clone())
+            })
+            .collect()
     }
 
     pub fn get_time_remaining_labels(&self) -> Vec<gtk::Label> {
-        self.builders.iter().map(|builder| builder.get_object_expect("time_remaining_label")).collect()
+        self.builders
+            .iter()
+            .map(|builder| builder.get_object_expect("time_remaining_label"))
+            .collect()
     }
 
     pub fn get_presses_remaining_labels(&self) -> Vec<gtk::Label> {
-        self.builders.iter().map(|builder| builder.get_object_expect("presses_remaining_label")).collect()
+        self.builders
+            .iter()
+            .map(|builder| builder.get_object_expect("presses_remaining_label"))
+            .collect()
     }
 }
-

@@ -1,4 +1,3 @@
-
 use xcb::randr;
 
 fn main() {
@@ -69,7 +68,9 @@ fn main() {
     );
     xcb::map_window(&conn, win);
 
-    let screen_resources = randr::get_screen_resources_current(&conn, win).get_reply().unwrap();
+    let screen_resources = randr::get_screen_resources_current(&conn, win)
+        .get_reply()
+        .unwrap();
     let outputs = screen_resources.outputs();
     let crtcs = screen_resources.crtcs();
     dbg!(outputs, crtcs);
@@ -78,20 +79,31 @@ fn main() {
         // TODO: this should probably be the timestamp returned the call to get_screen_resources_current
         let timestamp = xcb::CURRENT_TIME;
 
-        let output_info =
-            randr::get_output_info(&conn, output, timestamp).get_reply().unwrap();
+        let output_info = randr::get_output_info(&conn, output, timestamp)
+            .get_reply()
+            .unwrap();
 
         let output_conn = output_info.connection() as u32;
         let output_crtc = output_info.crtc();
 
-        if output_conn == randr::CONNECTION_DISCONNECTED || output_crtc == xcb::NONE {
+        if output_conn == randr::CONNECTION_DISCONNECTED
+            || output_crtc == xcb::NONE
+        {
             continue;
         }
         dbg!(output, output_conn, output_crtc);
 
-        let crtc_info = randr::get_crtc_info(&conn, output_crtc, timestamp).get_reply().unwrap();
+        let crtc_info = randr::get_crtc_info(&conn, output_crtc, timestamp)
+            .get_reply()
+            .unwrap();
 
-        dbg!(crtc_info.status(), crtc_info.x(), crtc_info.y(), crtc_info.width(), crtc_info.height());
+        dbg!(
+            crtc_info.status(),
+            crtc_info.x(),
+            crtc_info.y(),
+            crtc_info.width(),
+            crtc_info.height()
+        );
     }
 
     conn.flush();
@@ -129,18 +141,31 @@ fn main() {
                         xcb::poly_segment(&conn, win, foreground, &segments);
 
                         /* We draw the rectangles */
-                        xcb::poly_rectangle(&conn, win, foreground, &rectangles);
+                        xcb::poly_rectangle(
+                            &conn,
+                            win,
+                            foreground,
+                            &rectangles,
+                        );
 
                         /* We draw the arcs */
                         xcb::poly_arc(&conn, win, foreground, &arcs);
 
-                        xcb::grab_keyboard(&conn, true, win, xcb::CURRENT_TIME, xcb::GRAB_MODE_ASYNC as u8, xcb::GRAB_MODE_ASYNC as u8);
+                        xcb::grab_keyboard(
+                            &conn,
+                            true,
+                            win,
+                            xcb::CURRENT_TIME,
+                            xcb::GRAB_MODE_ASYNC as u8,
+                            xcb::GRAB_MODE_ASYNC as u8,
+                        );
 
                         /* We flush the request */
                         conn.flush();
                     }
                     xcb::KEY_PRESS => {
-                        let key_press: &xcb::KeyPressEvent = unsafe { xcb::cast_event(&event) };
+                        let key_press: &xcb::KeyPressEvent =
+                            unsafe { xcb::cast_event(&event) };
                         println!("Key '{}' pressed", key_press.detail());
                         if key_press.detail() == 0x18 {
                             break;

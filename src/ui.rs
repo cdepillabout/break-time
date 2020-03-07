@@ -30,45 +30,50 @@ fn setup(state: &State) {
     for window in state.get_app_wins() {
         window.set_application(Some(&state.app));
         css::setup(window.upcast_ref());
-    };
+    }
 }
 
 fn connect_events(state: &State) {
     for window in state.get_app_wins() {
-        window.connect_key_press_event(clone!(@strong state => move |_, event_key| {
-            if event_key.get_keyval() == gdk::enums::key::space {
-                decrement_presses_remaining(&state);
-                redisplay(&state);
-                Inhibit(true)
-            } else {
-                Inhibit(false)
-            }
-        }));
+        window.connect_key_press_event(
+            clone!(@strong state => move |_, event_key| {
+                if event_key.get_keyval() == gdk::enums::key::space {
+                    decrement_presses_remaining(&state);
+                    redisplay(&state);
+                    Inhibit(true)
+                } else {
+                    Inhibit(false)
+                }
+            }),
+        );
     }
 
-    gtk::timeout_add(200, clone!(@strong state => move || {
+    gtk::timeout_add(
+        200,
+        clone!(@strong state => move || {
 
-        let now = Instant::now();
-        let time_diff = now.saturating_duration_since(state.start_instant);
+            let now = Instant::now();
+            let time_diff = now.saturating_duration_since(state.start_instant);
 
-        // the full time we want to wait for
-        let full_time = Duration::new(20, 0);
+            // the full time we want to wait for
+            let full_time = Duration::new(20, 0);
 
-        let option_time_remaining = full_time.checked_sub(time_diff);
+            let option_time_remaining = full_time.checked_sub(time_diff);
 
-        match option_time_remaining {
-            None => {
-                state.app.quit();
-            }
-            Some(time_remaining) => {
-                for label in state.get_time_remaining_labels() {
-                    label.set_text(&format!("{:?}", time_remaining));
+            match option_time_remaining {
+                None => {
+                    state.app.quit();
+                }
+                Some(time_remaining) => {
+                    for label in state.get_time_remaining_labels() {
+                        label.set_text(&format!("{:?}", time_remaining));
+                    }
                 }
             }
-        }
 
-        glib::source::Continue(true)
-    }));
+            glib::source::Continue(true)
+        }),
+    );
 }
 
 fn redisplay(state: &State) {
@@ -95,7 +100,9 @@ fn app_activate(app: gtk::Application) {
         window.show_all();
 
         let monitor_rect = monitor.get_geometry();
-        let gdk_window: gdk::Window = window.get_window().expect("Gtk::Window should always be able to be converted to Gdk::Window");
+        let gdk_window: gdk::Window = window.get_window().expect(
+            "Gtk::Window should always be able to be converted to Gdk::Window",
+        );
         gdk_window.fullscreen_on_monitor(monitor.id);
         // gdk_window.resize(monitor_rect.width, monitor_rect.height);
     }
