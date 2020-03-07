@@ -11,13 +11,24 @@ keywords = ["gtk", "break", "reminder", "gui"]
 categories = ["gui"]
 
 [dependencies]
+structopt = "0.3.9"
+
+# deps for GTK
 gdk = "0.12.0"
 gio = "0.8.0"
 glib = "0.9.1"
 glib-sys = "0.9.1"
 gtk-sys = "0.9.2"
 pango = "0.8.0"
-structopt = "0.3.9"
+
+# deps for google-calendar3
+google-calendar3 = "^1.0"
+hyper = "^0.10"
+hyper-rustls = "^0.6"
+serde = "^1.0"
+serde_json = "^1.0"
+yup-oauth2 = "^1.0"
+
 
 [dependencies.gtk]
 version = "0.8.0"
