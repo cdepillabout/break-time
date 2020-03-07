@@ -29,7 +29,6 @@ fn decrement_presses_remaining(state: &State) {
 fn setup(state: &State) {
     for window in state.get_app_wins() {
         window.set_application(Some(&state.app));
-        window.fullscreen();
         css::setup(window.upcast_ref());
     };
 }
@@ -92,8 +91,13 @@ fn app_activate(app: gtk::Application) {
 
     redisplay(&state);
 
-    for window in state.get_app_wins() {
+    for (window, monitor) in state.get_app_wins_with_monitors() {
         window.show_all();
+
+        let monitor_rect = monitor.get_geometry();
+        let gdk_window: gdk::Window = window.get_window().expect("Gtk::Window should always be able to be converted to Gdk::Window");
+        gdk_window.fullscreen_on_monitor(monitor.id);
+        // gdk_window.resize(monitor_rect.width, monitor_rect.height);
     }
 
     receiver.attach(
