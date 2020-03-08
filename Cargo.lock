@@ -87,6 +87,7 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 name = "break-time"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "gdk",
  "gio",
  "glib",
@@ -101,6 +102,7 @@ dependencies = [
  "serde_json",
  "structopt",
  "xcb",
+ "xdg",
  "yup-oauth2",
 ]
 
@@ -1241,6 +1243,12 @@ dependencies = [
  "libc",
  "log 0.4.8",
 ]
+
+[[package]]
+name = "xdg"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d089681aa106a86fade1b0128fb5daf07d5867a509ab036d99988dec80429a57"
 
 [[package]]
 name = "yup-oauth2"

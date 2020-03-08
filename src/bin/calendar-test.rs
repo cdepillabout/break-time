@@ -1,17 +1,18 @@
-
 use google_calendar3::CalendarHub;
 use google_calendar3::Channel;
-use google_calendar3::{Result, Error};
+use google_calendar3::{Error, Scope, Result};
 
 use std::default::Default;
 use std::net::TcpListener;
 
-use yup_oauth2::{Authenticator, AuthenticatorDelegate, ApplicationSecret, MemoryStorage, Retry};
+use yup_oauth2::{
+    ApplicationSecret, Authenticator, AuthenticatorDelegate, DiskTokenStorage,
+    Retry,
+};
 
 struct MyAuthDel;
 
 impl AuthenticatorDelegate for MyAuthDel {
-
     fn connection_error(&mut self, err: &hyper::Error) -> Retry {
         println!("Got connection error: {:?}", err);
         Retry::Abort
@@ -28,8 +29,15 @@ impl AuthenticatorDelegate for MyAuthDel {
         println!("User denied access");
     }
 
-    fn token_refresh_failed(&mut self, error: &String, error_description: &Option<String>) {
-        println!("Token refresh failed: {:?} ({:?})", error, error_description);
+    fn token_refresh_failed(
+        &mut self,
+        error: &String,
+        error_description: &Option<String>,
+    ) {
+        println!(
+            "Token refresh failed: {:?} ({:?})",
+            error, error_description
+        );
     }
 }
 
@@ -38,6 +46,17 @@ fn get_available_port() -> Option<u16> {
 }
 
 fn main() {
+    let xdg_dirs = xdg::BaseDirectories::with_prefix("break-time")
+        .expect("Couldn't find the xdg base directory.");
+    let google_oauth_token_path = xdg_dirs
+        .place_config_file("google-oauth-token")
+        .expect("Can't create xdg configuration directory");
+    let google_oauth_token_path_string =
+        google_oauth_token_path.to_string_lossy().into_owned();
+    let disk_token_storage =
+        DiskTokenStorage::new(&google_oauth_token_path_string)
+            .expect("Couldn't create a file to hold the google oauth token");
+
     let secret: ApplicationSecret =
         ApplicationSecret {
             client_id: String::from("728095687622-mpib9rmdtck7e8ln9egelnns6na0me08.apps.googleusercontent.com"),
@@ -55,11 +74,21 @@ fn main() {
             ..Default::default()
         };
 
-    let mut http_client_for_auth = hyper::Client::with_connector(hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()));
-    let mut http_client_for_cal = hyper::Client::with_connector(hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()));
+    let mut http_client_for_auth = hyper::Client::with_connector(
+        hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
+    );
+    let mut http_client_for_cal = hyper::Client::with_connector(
+        hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
+    );
 
     println!("before creating auth...");
-    let auth = Authenticator::new(&secret, MyAuthDel, http_client_for_auth, MemoryStorage::default(), Some(yup_oauth2::FlowType::InstalledRedirect(8080)));
+    let auth = Authenticator::new(
+        &secret,
+        MyAuthDel,
+        http_client_for_auth,
+        disk_token_storage,
+        Some(yup_oauth2::FlowType::InstalledRedirect(8080)),
+    );
     println!("after creating auth...");
 
     let mut hub = CalendarHub::new(http_client_for_cal, auth);
@@ -95,7 +124,44 @@ fn main() {
     //             .always_include_email(false)
     //             .doit();
 
-    let result = hub.calendar_list().list().doit();
+    let (_, calendar_list_res) = hub
+        .calendar_list()
+        .list()
+        .add_scope(Scope::Readonly)
+        .add_scope(Scope::EventReadonly)
+        .doit()
+        .expect("couldn't get a response from calendar_list");
 
-    println!("result: {:?}", result);
+    let calendars = calendar_list_res
+        .items
+        .expect("There should be some calendars available");
+
+    let calendar_ids: Vec<&str> = calendars
+        .iter()
+        .map(|calendar| {
+            calendar
+                .id
+                .as_deref()
+                .expect("Calendars should always have ids")
+        })
+        .collect();
+
+
+    let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
+    let ten_minutes_ago: chrono::DateTime<chrono::Utc> = now - chrono::Duration::minutes(10);
+    let in_twenty_mins: chrono::DateTime<chrono::Utc> = now + chrono::Duration::minutes(20);
+    println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
+
+    for calendar_id in calendar_ids {
+        let result = hub
+            .events()
+            .list(calendar_id)
+            .add_scope(Scope::Readonly)
+            .add_scope(Scope::EventReadonly)
+            // all events the occur over the next 20 minutes
+            .time_min(&ten_minutes_ago.to_rfc3339())
+            .time_max(&in_twenty_mins.to_rfc3339())
+            .doit();
+        print!("\n\nevents for {}: {:?}", calendar_id, result);
+    }
 }
