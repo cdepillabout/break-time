@@ -15,6 +15,37 @@
 // }
 
 
+pub fn get_atom(connection: &xcb::Connection, name: &str) -> Result<xcb::Atom, xcb::GenericError> {
+    Ok(
+        xcb::intern_atom(&connection, false, name)
+            .get_reply()?
+            .atom(),
+    )
+}
+
+// pub fn map_get_property_reply(
+//     cookie: xcb::GetPropertyCookie,
+// ) -> Result<xcb::GetPropertyReply, xcb::GenericError> {
+//     cookie.get_reply()
+// }
+
+// pub fn get_property(
+//     connection: &xcb::Connection,
+//     window: xcb::Window,
+//     name: xcb::Atom,
+//     data_type: xcb::Atom,
+// ) -> Result<xcb::GetPropertyReply, TrayError> {
+//     &xcb::get_property(
+//         connection,
+//         false,
+//         window,
+//         name,
+//         data_type,
+//         0,
+//         1024,
+//     )
+// }
+
 
 fn main () {
     // let xid = gdk_sys::gdk_x11_window_get_xid(gdk_window.to_glib_none().0);
@@ -31,6 +62,9 @@ fn main () {
 
     println!("query tree reply, root window: {}, query_tree_reply parent window: {}\n", query_tree_reply.root(), query_tree_reply.parent());
 
+    let net_wm_name_atom = get_atom(&conn, "_NET_WM_NAME").expect("should be able to get the _NET_WM_NAME atom");
+    let utf8_string_atom = get_atom(&conn, "UTF8_STRING").expect("should be able to get the UTF8_STRING atom");
+
     println!("query tree reply, children:");
 
     for win in query_tree_reply.children() {
@@ -41,7 +75,20 @@ fn main () {
         let length_to_get = 1024;
 
         let prop_name = xcb::xproto::get_property(&conn, false, *win, xcb::xproto::ATOM_WM_NAME, xcb::xproto::ATOM_STRING, starting_offset, length_to_get).get_reply().unwrap();
-        let title = String::from_utf8(prop_name.value().to_vec()).unwrap_or(String::from("(title not UTF8...)"));
+        let title_vec = prop_name.value().to_vec();
+        let title = String::from_utf8(title_vec.clone()).unwrap_or(String::from("(title not UTF8...)"));
+
+        let prop_net_wm_name = xcb::xproto::get_property(&conn, false, *win, xcb::xproto::ATOM_WM_NAME, xcb::xproto::ATOM_STRING, starting_offset, length_to_get).get_reply().unwrap();
+        // utils::get_property(
+        //     connection,
+        //     self.handle,
+        //     utils::get_atom(&connection, "_NET_WM_NAME")?,
+        //     utils::get_atom(&connection, "UTF8_STRING")?,
+        // ).map(|r| {
+        //     str::from_utf8(r.value())
+        //         .expect("Atom with type UTF&_STRING wasn't valid utf-8")
+        //         .into()
+        // })
 
         let prop_class = xcb::xproto::get_property(&conn, false, *win, xcb::xproto::ATOM_WM_CLASS, xcb::xproto::ATOM_STRING, starting_offset, length_to_get).get_reply().unwrap();
         let class_all = prop_class.value::<u8>();
@@ -64,7 +111,7 @@ fn main () {
         // chrome.
         //
         // Maybe I need to make sure I don't include the final \0 in the title????
-        println!("\tchild: {}, class: {}, class name: {}, title: {}", win, &class, &class_name, title);
+        println!("\tchild: {}, class: {}, class name: {}, title: {}, title vec: {:?}", win, &class, &class_name, title, title_vec);
 
     }
 }
