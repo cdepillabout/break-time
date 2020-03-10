@@ -103,8 +103,8 @@ fn main() {
         )
         .get_reply()
         .unwrap();
-        let net_wm_name_val = prop_name.value();
-        let net_wm_name = String::from_utf8(net_wm_name_val)
+        let net_wm_name_vec = prop_name.value().to_vec();
+        let net_wm_name = String::from_utf8(net_wm_name_vec.clone())
             .unwrap_or(String::from("(net_wm_name not UTF8...)"));
 
         // utils::get_property(
@@ -154,6 +154,8 @@ fn main() {
         // chrome.
         //
         // Maybe I need to make sure I don't include the final \0 in the title????
-        println!("\tchild: {}, class: {}, class name: {}, title: {}, title vec: {:?}", win, &class, &class_name, title, title_vec);
+        if class_name == "Navigator" {
+            println!("\tchild: {}, class: {}, class name: {}, title: {}, title_vec: {:?}, net_wm_name: {}, net_wm_name_vec: {:?}", win, &class, &class_name, title, title_vec, net_wm_name, net_wm_name_vec);
+        }
     }
 }
