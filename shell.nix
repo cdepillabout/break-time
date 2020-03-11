@@ -29,6 +29,7 @@ stdenv.mkDerivation {
     gtk3
 
     # Xorg libraries
+    python3 # xcb crate uses python
     xorg.libxcb
   ];
 
