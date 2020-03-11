@@ -23,29 +23,6 @@ pub fn get_atom(
         .atom())
 }
 
-// pub fn map_get_property_reply(
-//     cookie: xcb::GetPropertyCookie,
-// ) -> Result<xcb::GetPropertyReply, xcb::GenericError> {
-//     cookie.get_reply()
-// }
-
-// pub fn get_property(
-//     connection: &xcb::Connection,
-//     window: xcb::Window,
-//     name: xcb::Atom,
-//     data_type: xcb::Atom,
-// ) -> Result<xcb::GetPropertyReply, TrayError> {
-//     &xcb::get_property(
-//         connection,
-//         false,
-//         window,
-//         name,
-//         data_type,
-//         0,
-//         1024,
-//     )
-// }
-
 fn main() {
     // let xid = gdk_sys::gdk_x11_window_get_xid(gdk_window.to_glib_none().0);
 
@@ -71,6 +48,8 @@ fn main() {
 
     println!("query tree reply, children:");
 
+    // TODO: Send a bunch of requests and then get the replies...
+
     for win in query_tree_reply.children() {
         // TODO: It is possible that the window has disappeared since we originally got the list.
 
@@ -88,6 +67,8 @@ fn main() {
         )
         .get_reply()
         .unwrap();
+        let title_format = prop_name.format();
+        let title_type = prop_name.type_();
         let title_vec = prop_name.value().to_vec();
         let title = String::from_utf8(title_vec.clone())
             .unwrap_or(String::from("(title not UTF8...)"));
@@ -103,7 +84,9 @@ fn main() {
         )
         .get_reply()
         .unwrap();
-        let net_wm_name_vec = prop_name.value().to_vec();
+        let net_wm_name_format = prop_net_wm_name.format();
+        let net_wm_name_type = prop_net_wm_name.type_();
+        let net_wm_name_vec = prop_net_wm_name.value().to_vec();
         let net_wm_name = String::from_utf8(net_wm_name_vec.clone())
             .unwrap_or(String::from("(net_wm_name not UTF8...)"));
 
@@ -129,10 +112,26 @@ fn main() {
         )
         .get_reply()
         .unwrap();
+        let class_format = prop_class.format();
+        let class_type = prop_class.type_();
         let class_all = prop_class.value::<u8>();
         let option_class_index = class_all.iter().position(|&b| b == 0);
         let class_name: String;
         let class: String;
+
+        let prop_trans = xcb::xproto::get_property(
+            &conn,
+            false,
+            *win,
+            xcb::xproto::ATOM_WM_TRANSIENT_FOR,
+            xcb::xproto::ATOM_WINDOW,
+            starting_offset,
+            length_to_get,
+        )
+        .get_reply()
+        .unwrap();
+
+        let trans_for_wins: Vec<xcb::Window> = prop_trans.value().to_vec();
 
         match option_class_index {
             Some(class_index) => {
@@ -154,8 +153,8 @@ fn main() {
         // chrome.
         //
         // Maybe I need to make sure I don't include the final \0 in the title????
-        if class_name == "Navigator" {
-            println!("\tchild: {}, class: {}, class name: {}, title: {}, title_vec: {:?}, net_wm_name: {}, net_wm_name_vec: {:?}", win, &class, &class_name, title, title_vec, net_wm_name, net_wm_name_vec);
-        }
+        // if class_name == "Navigator" {
+            println!("\tchild: {}\n\t\ttrans for wins: {:?}\n\t\tclass: {}\n\t\tclass name: {}\n\t\tclass_format: {}\n\t\tclass_type: {}\n\t\ttitle_format: {}\n\t\ttitle_type: {}\n\t\tnet_wm_name_format: {}\n\t\tnet_wm_name_type: {}\n\t\ttitle: {}\n\t\tnet_wm_name: {}\n\t\ttitle_vec:       {:?}\n\t\tnet_wm_name_vec: {:?}", win, trans_for_wins, &class, &class_name, class_format, class_type, title_format, title_type, net_wm_name_format, net_wm_name_type, title, net_wm_name, title_vec, net_wm_name_vec);
+        // }
     }
 }
