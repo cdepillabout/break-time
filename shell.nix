@@ -10,23 +10,34 @@ with import src {};
 
 stdenv.mkDerivation {
   name = "break-time-rust-env";
+
   nativeBuildInputs = [
     # Things like cargo, rustc, rustfmt, and clippy can be installed with commands like
     #
     # $ rustup component add clippy
     rustup
 
+    llvmPackages.clang
+    llvmPackages.libclang
     pkgconfig
 
     # For creating the UI.
     gnome3.glade
   ];
+
+  # libappindicator-sys generates bindings with bindgen, which uses LLVM and
+  # requires LIBCLANG_PATH be set.
+  LIBCLANG_PATH = "${llvmPackages.libclang}/lib";
+
   buildInputs = [
     openssl
 
     # GTK libraries
     glib
     gtk3
+
+    # Libraries for the system tray
+    libappindicator-gtk3
 
     # Xorg libraries
     python3 # xcb crate uses python
