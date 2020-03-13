@@ -17,8 +17,11 @@ stdenv.mkDerivation {
     # $ rustup component add clippy
     rustup
 
+    # Some rust packages use clang to compile c bindings.
     llvmPackages.clang
     llvmPackages.libclang
+
+    # Some rust packages use pkgconfig when building.
     pkgconfig
 
     # For creating the UI.
@@ -35,9 +38,6 @@ stdenv.mkDerivation {
     # GTK libraries
     glib
     gtk3
-
-    # Libraries for the system tray
-    libappindicator-gtk3
 
     # Xorg libraries
     python3 # xcb crate uses python
