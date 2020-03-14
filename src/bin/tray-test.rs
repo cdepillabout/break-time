@@ -153,10 +153,34 @@ fn main() {
         }
     );
 
-    let mut my_img = Vec::from(IMG);
-    let whowhowho: &mut [u8] = &mut my_img;
+    let mut whowhowho: &[u8] = IMG;
+    let whowhowho1: &mut &[u8] = &mut whowhowho;
 
-    let image_surface = cairo::ImageSurface::create_from_png(whowhowho).expect("should create png from mem");
+    let image_surface = cairo::ImageSurface::create_from_png(whowhowho1).expect("should create png from mem");
+
+    let cr = cairo::Context::new(&image_surface);
+    // cairo_select_font_face (cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    // cairo_set_font_size (cr, 32.0);
+    // cairo_set_source_rgb (cr, 0.0, 0.0, 1.0);
+    // cairo_move_to (cr, 10.0, 50.0);
+    // cairo_show_text (cr, "Hello, world");
+    cr.select_font_face("serif", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
+    cr.set_font_size(40.0);
+    cr.set_source_rgb(1.0,0.0,0.0);
+    cr.move_to(10.0, 50.0);
+    cr.show_text("Hello, world");
+
+    let mut file = std::fs::File::create("test.png").expect("no open");
+    image_surface.write_to_png(&mut file).expect("fefefefefe");
+
+    // pub fn create_from_png<R: Read>(stream: &mut R) -> Result<ImageSurface, IoError>
+    // impl<'_> Read for &'_ [u8]
+    // impl<'_, R: Read + ?Sized> Read for &'_ mut R
+    // impl<R: Read + ?Sized> Read for Box<R>
+
+    // pub fn create_from_png(stream: &mut (&'_ [u8])) -> Result<ImageSurface, IoError>
+    
+    // impl Write for File
 
     gtk::main();
 }
