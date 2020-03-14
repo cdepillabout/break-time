@@ -122,9 +122,10 @@ fn main() {
     let status_icon: *mut gtk_sys::GtkStatusIcon;
     unsafe {
         status_icon = gtk_sys::gtk_status_icon_new();
+
         gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, whowho);
 
-
+        gtk_sys::gtk_status_icon_set_tooltip_text(status_icon, "hello".to_glib_none().0);
     }
 
     connect_activate(
