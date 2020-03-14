@@ -1,6 +1,7 @@
 use gdk_pixbuf::prelude::*;
 use glib::translate::*;
 use gtk::prelude::*;
+use std::io::prelude::*;
 
 static IMG: &'static [u8] = include_bytes!("../../imgs/clock.png");
 static IMG2: &'static [u8] = include_bytes!("../../imgs/clock-2.png");
@@ -151,6 +152,11 @@ fn main() {
             println!("after popup_menu!!!");
         }
     );
+
+    let mut my_img = Vec::from(IMG);
+    let whowhowho: &mut [u8] = &mut my_img;
+
+    let image_surface = cairo::ImageSurface::create_from_png(whowhowho).expect("should create png from mem");
 
     gtk::main();
 }
