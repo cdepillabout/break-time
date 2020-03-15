@@ -159,28 +159,24 @@ fn main() {
     let image_surface = cairo::ImageSurface::create_from_png(whowhowho1).expect("should create png from mem");
 
     let cr = cairo::Context::new(&image_surface);
-    // cairo_select_font_face (cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-    // cairo_set_font_size (cr, 32.0);
-    // cairo_set_source_rgb (cr, 0.0, 0.0, 1.0);
-    // cairo_move_to (cr, 10.0, 50.0);
-    // cairo_show_text (cr, "Hello, world");
-    cr.select_font_face("serif", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
-    cr.set_font_size(40.0);
+    cr.select_font_face("monospace", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
+    cr.set_font_size(800.0);
     cr.set_source_rgb(1.0,0.0,0.0);
-    cr.move_to(10.0, 50.0);
-    cr.show_text("Hello, world");
+    cr.move_to(0.0, 750.0);
+    cr.show_text("1m");
 
-    let mut file = std::fs::File::create("test.png").expect("no open");
-    image_surface.write_to_png(&mut file).expect("fefefefefe");
+    // let mut file = std::fs::File::create("test.png").expect("no open");
+    // image_surface.write_to_png(&mut file).expect("fefefefefe");
 
-    // pub fn create_from_png<R: Read>(stream: &mut R) -> Result<ImageSurface, IoError>
-    // impl<'_> Read for &'_ [u8]
-    // impl<'_, R: Read + ?Sized> Read for &'_ mut R
-    // impl<R: Read + ?Sized> Read for Box<R>
+    // let image = gtk::Image::new_from_surface(Some(&image_surface));
+    // let new_pixbuf = image.get_pixbuf().expect("The image should not be empty");
+    // let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
+    let new_pixbuf = gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
+    let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
 
-    // pub fn create_from_png(stream: &mut (&'_ [u8])) -> Result<ImageSurface, IoError>
-    
-    // impl Write for File
+    unsafe {
+        gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, new_pixbuf_sys);
+    }
 
     gtk::main();
 }
