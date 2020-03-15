@@ -1,10 +1,12 @@
-use gdk_pixbuf::prelude::*;
-use glib::translate::*;
-use gtk::prelude::*;
-use std::io::prelude::*;
+#![allow(unsafe_code)]
 
-static IMG: &'static [u8] = include_bytes!("../../imgs/clock.png");
-static IMG2: &'static [u8] = include_bytes!("../../imgs/clock-2.png");
+pub use glib::translate::*;
+
+use crate::prelude::*;
+
+
+static IMG: &'static [u8] = include_bytes!("../imgs/clock.png");
+// static IMG2: &'static [u8] = include_bytes!("../imgs/clock-2.png");
 
 fn connect_activate<F>(
     status_icon: *mut gtk_sys::GtkStatusIcon,
@@ -77,9 +79,7 @@ where
     }
 }
 
-fn main() {
-    gtk::init().unwrap();
-
+pub fn show() -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
     let pixbuf_loader = gdk_pixbuf::PixbufLoader::new();
     pixbuf_loader
         .write(IMG)
@@ -87,40 +87,35 @@ fn main() {
     let pixbuf = pixbuf_loader
         .get_pixbuf()
         .expect("could not get a pixbuf from the loaded image");
-    let whowho: *mut gdk_pixbuf_sys::GdkPixbuf = pixbuf.to_glib_none().0;
+    pixbuf_loader.close().expect("could not close pixbuf loader");
 
-    let pixbuf_loader2 = gdk_pixbuf::PixbufLoader::new();
-    pixbuf_loader2
-        .write(IMG2)
-        .expect("could not write image to pixbufloader");
-    let pixbuf2: gdk_pixbuf::Pixbuf = pixbuf_loader2
-        .get_pixbuf()
-        .expect("could not get a pixbuf from the loaded image");
-    let whatwhat: *mut gdk_pixbuf_sys::GdkPixbuf = pixbuf2.to_glib_none().0;
+    let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = pixbuf.to_glib_none().0;
 
     let status_icon: *mut gtk_sys::GtkStatusIcon;
+
     unsafe {
         status_icon = gtk_sys::gtk_status_icon_new();
 
-        gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, whowho);
+        gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, pixbuf_sys);
 
         gtk_sys::gtk_status_icon_set_tooltip_text(status_icon, "hello".to_glib_none().0);
 
+        gtk_sys::gtk_status_icon_set_visible(status_icon, 1);
     }
 
     connect_activate(
         status_icon,
-        move |status_icon: *mut gtk_sys::GtkStatusIcon| {
-            unsafe {
-                gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, whatwhat);
-            }
+        move |_status_icon: *mut gtk_sys::GtkStatusIcon| {
+            // unsafe {
+            //     gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, whatwhat);
+            // }
             println!("clicked!!!");
         },
     );
 
     connect_popup_menu(
         status_icon,
-        move |status_icon: *mut gtk_sys::GtkStatusIcon, button, activate_time| {
+        move |_status_icon: *mut gtk_sys::GtkStatusIcon, button, activate_time| {
             let menu = gtk::Menu::new();
             let test_item = gtk::MenuItem::new_with_label("test test test");
             test_item.connect_activate(|_| println!("yo from menu item"));
@@ -132,24 +127,5 @@ fn main() {
         }
     );
 
-    let mut whowhowho: &[u8] = IMG;
-    let whowhowho1: &mut &[u8] = &mut whowhowho;
-
-    let image_surface = cairo::ImageSurface::create_from_png(whowhowho1).expect("should create png from mem");
-
-    let cr = cairo::Context::new(&image_surface);
-    cr.select_font_face("monospace", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
-    cr.set_font_size(800.0);
-    cr.set_source_rgb(1.0,0.0,0.0);
-    cr.move_to(0.0, 750.0);
-    cr.show_text("1m");
-
-    let new_pixbuf = gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
-    let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
-
-    unsafe {
-        gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, new_pixbuf_sys);
-    }
-
-    gtk::main();
+    (status_icon, pixbuf)
 }

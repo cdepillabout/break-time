@@ -9,6 +9,7 @@ repository = "https://github.com/cdepillabout/break-time"
 readme = "README.md"
 keywords = ["gtk", "break", "reminder", "gui"]
 categories = ["gui"]
+default-run = "break-time"
 
 [dependencies]
 chrono = "0.4"
