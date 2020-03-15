@@ -168,9 +168,6 @@ fn main() {
     // let mut file = std::fs::File::create("test.png").expect("no open");
     // image_surface.write_to_png(&mut file).expect("fefefefefe");
 
-    // let image = gtk::Image::new_from_surface(Some(&image_surface));
-    // let new_pixbuf = image.get_pixbuf().expect("The image should not be empty");
-    // let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
     let new_pixbuf = gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
     let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
 
