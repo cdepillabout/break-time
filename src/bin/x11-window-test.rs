@@ -1,18 +1,3 @@
-// struct ClassHint<'a> {
-//     name_bytes: &'a [u8],
-//     class_bytes: &'a [u8],
-// }
-
-// impl<'a> ClassHint<'a> {
-//     pub fn name(&self) -> &str {
-//         std::str::from_utf8(self.name_bytes).expect("couldn't interpret name_bytes as UTF-8")
-//     }
-
-//     pub fn class(&self) -> &str {
-//         std::str::from_utf8(self.class_bytes).expect("couldn't interpret class_bytes as UTF-8")
-//     }
-// }
-
 pub fn get_atom(
     connection: &xcb::Connection,
     name: &str,
