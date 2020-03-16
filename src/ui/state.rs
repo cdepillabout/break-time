@@ -3,6 +3,8 @@ use super::prelude::*;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 use std::time::Instant;
 
+use crate::Msg;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Display,
@@ -60,10 +62,11 @@ pub struct State {
     pub sender: glib::Sender<Message>,
     pub presses_remaining: Arc<RwLock<u32>>,
     pub start_instant: Instant,
+    pub app_sender: glib::Sender<Msg>,
 }
 
 impl State {
-    pub fn new(sender: glib::Sender<Message>) -> Self {
+    pub fn new(app_sender: glib::Sender<Msg>, sender: glib::Sender<Message>) -> Self {
         let monitors = Monitor::all();
         let monitors_num = monitors.len();
 
@@ -77,6 +80,7 @@ impl State {
             sender,
             presses_remaining: Arc::new(RwLock::new(2)),
             start_instant: Instant::now(),
+            app_sender,
         }
     }
 
@@ -127,5 +131,9 @@ impl State {
             .iter()
             .map(|builder| builder.get_object_expect("presses_remaining_label"))
             .collect()
+    }
+
+    pub fn notify_app_end(&self) {
+        self.app_sender.send(Msg::EndBreak);
     }
 }

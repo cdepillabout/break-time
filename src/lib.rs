@@ -13,13 +13,18 @@ use prelude::*;
 
 pub enum Msg {
     StartBreak,
+    EndBreak,
 }
 
-fn handle_msg_recv(msg: Msg) {
+fn handle_msg_recv(sender: glib::Sender<Msg>, scheduler: Scheduler, msg: Msg) {
     match msg {
         Msg::StartBreak => {
             println!("starting break");
-            ui::start_break();
+            ui::start_break(sender);
+        }
+        Msg::EndBreak => {
+            println!("break ended");
+            scheduler.run();
         }
     }
 }
@@ -30,7 +35,7 @@ pub fn default_main() {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let scheduler = Scheduler::new(sender);
+    let scheduler = Scheduler::new(sender.clone());
 
     scheduler.run();
 
@@ -38,8 +43,8 @@ pub fn default_main() {
 
     receiver.attach(
         None,
-        |msg| {
-            handle_msg_recv(msg);
+        move |msg| {
+            handle_msg_recv(sender.clone(), scheduler.clone(), msg);
             glib::source::Continue(true)
         },
     );

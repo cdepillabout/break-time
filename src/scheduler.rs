@@ -8,9 +8,10 @@ use std::sync::{Arc, Mutex};
 
 use super::Msg;
 
+#[derive(Clone)]
 pub struct Scheduler {
     sender: glib::Sender<Msg>,
-    plugins: Vec<Box<dyn Plugin + Send + Sync>>,
+    plugins: Vec<Arc<dyn Plugin + Send + Sync>>,
     time_until_break: Duration,
 }
 
@@ -21,15 +22,17 @@ impl Scheduler {
         let window_title_plugin = plugins::WindowTitles::new();
         Scheduler {
             sender,
-            plugins: vec![Box::new(window_title_plugin)],
+            plugins: vec![Arc::new(window_title_plugin)],
             time_until_break: DEFAULT_TIME_UNTIL_BREAK,
         }
     }
 
-    pub fn run(self) {
+    pub fn run(&self) {
+        let time_until_break = self.time_until_break;
+        let sender = self.sender.clone();
         std::thread::spawn(move || {
-            std::thread::sleep(self.time_until_break);
-            self.sender.send(Msg::StartBreak);
+            std::thread::sleep(time_until_break);
+            sender.send(Msg::StartBreak);
         });
     }
 }

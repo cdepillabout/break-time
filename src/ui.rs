@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 
 use prelude::*;
 use state::{Message, State};
+use super::Msg;
 
 fn handle_msg_recv(state: &State, msg: Message) {
     // enable(state);
@@ -23,6 +24,7 @@ fn end_break(state: &State) {
     for window in state.get_app_wins() {
         window.hide();
     }
+    state.notify_app_end();
 }
 
 fn decrement_presses_remaining(state: &State) {
@@ -91,11 +93,11 @@ fn redisplay(state: &State) {
     }
 }
 
-pub fn start_break() {
+pub fn start_break(app_sender: glib::Sender<Msg>) {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let state = State::new(sender);
+    let state = State::new(app_sender, sender);
 
     setup(&state);
 
