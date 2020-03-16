@@ -1,4 +1,4 @@
-#![warn(unsafe_code)]
+#![deny(unsafe_code)]
 #![deny(clippy::all, clippy::pedantic)]
 #![warn(clippy::nursery)]
 
@@ -45,22 +45,37 @@ use prelude::*;
 
 // }
 
+pub enum Msg {
+    StartBreak,
+}
+
+fn handle_msg_recv(msg: Msg) {
+    match msg {
+        Msg::StartBreak => {
+            println!("starting break");
+        }
+    }
+}
+
 pub fn default_main() {
     gtk::init().expect("Could not initialize GTK");
 
-    let scheduler = Scheduler::new();
+    let (sender, receiver) =
+        glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let (status_icon, pixbuf) = tray::show();
+    let scheduler = Scheduler::new(sender);
 
-    let is_vis;
-    let is_embed;
+    scheduler.run();
 
-    unsafe {
-        is_vis = gtk_sys::gtk_status_icon_get_visible(status_icon);
-        is_embed = gtk_sys::gtk_status_icon_is_embedded(status_icon);
-    }
+    tray::show();
 
-    println!("is vis: {}, is_embed: {}", is_vis, is_embed);
+    receiver.attach(
+        None,
+        |msg| {
+            handle_msg_recv(msg);
+            glib::source::Continue(true)
+        },
+    );
 
     gtk::main();
 }
