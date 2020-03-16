@@ -55,7 +55,6 @@ impl AsRef<gdk::Monitor> for Monitor {
 
 #[derive(Clone, Debug)]
 pub struct State {
-    pub app: gtk::Application,
     pub builders: Vec<gtk::Builder>,
     pub monitors: Vec<Monitor>,
     pub sender: glib::Sender<Message>,
@@ -64,7 +63,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(app: gtk::Application, sender: glib::Sender<Message>) -> Self {
+    pub fn new(sender: glib::Sender<Message>) -> Self {
         let monitors = Monitor::all();
         let monitors_num = monitors.len();
 
@@ -73,7 +72,6 @@ impl State {
             .collect();
 
         State {
-            app,
             builders,
             monitors,
             sender,

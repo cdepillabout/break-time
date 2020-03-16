@@ -14,7 +14,7 @@ pub struct Scheduler {
     time_until_break: Duration,
 }
 
-const DEFAULT_TIME_UNTIL_BREAK: Duration = Duration::from_secs(5 * 60);
+const DEFAULT_TIME_UNTIL_BREAK: Duration = Duration::from_secs(1 * 10);
 
 impl Scheduler {
     pub fn new(sender: glib::Sender<Msg>) -> Self {
@@ -29,6 +29,7 @@ impl Scheduler {
     pub fn run(self) {
         std::thread::spawn(move || {
             std::thread::sleep(self.time_until_break);
+            self.sender.send(Msg::StartBreak);
         });
     }
 }
