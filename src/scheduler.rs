@@ -11,7 +11,7 @@ use super::Msg;
 #[derive(Clone)]
 pub struct Scheduler {
     sender: glib::Sender<Msg>,
-    plugins: Vec<Arc<dyn Plugin + Send + Sync>>,
+    plugins: Arc<Vec<Box<dyn Plugin + Send + Sync>>>,
     time_until_break: Duration,
 }
 
@@ -22,7 +22,7 @@ impl Scheduler {
         let window_title_plugin = plugins::WindowTitles::new();
         Scheduler {
             sender,
-            plugins: vec![Arc::new(window_title_plugin)],
+            plugins: Arc::new(vec![Box::new(window_title_plugin)]),
             time_until_break: DEFAULT_TIME_UNTIL_BREAK,
         }
     }
