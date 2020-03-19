@@ -8,6 +8,7 @@ use crate::Msg;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
     Display,
+    End,
 }
 
 #[derive(Clone, Debug)]
@@ -135,5 +136,9 @@ impl State {
 
     pub fn notify_app_end(&self) {
         self.app_sender.send(Msg::EndBreak);
+    }
+
+    pub fn end(&self) {
+        self.sender.send(Message::End);
     }
 }

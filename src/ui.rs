@@ -12,19 +12,25 @@ use prelude::*;
 use state::{Message, State};
 use super::Msg;
 
-fn handle_msg_recv(state: &State, msg: Message) {
+fn handle_msg_recv(state: &State, msg: Message) -> glib::source::Continue {
     // enable(state);
 
     match msg {
-        Message::Display => (),
+        Message::Display =>
+            glib::source::Continue(true),
+        Message::End => {
+            for window in state.get_app_wins() {
+                window.hide();
+                window.destroy();
+            }
+            state.notify_app_end();
+            glib::source::Continue(false)
+        }
     }
 }
 
 fn end_break(state: &State) {
-    for window in state.get_app_wins() {
-        window.hide();
-    }
-    state.notify_app_end();
+    state.end();
 }
 
 fn decrement_presses_remaining(state: &State) {
@@ -118,9 +124,6 @@ pub fn start_break(app_sender: glib::Sender<Msg>) {
 
     receiver.attach(
         None,
-        clone!(@strong state => move |msg| {
-            handle_msg_recv(&state, msg);
-            glib::source::Continue(true)
-        }),
+        clone!(@strong state => move |msg| handle_msg_recv(&state, msg)),
     );
 }
