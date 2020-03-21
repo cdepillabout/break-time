@@ -93,6 +93,55 @@ struct WinProps {
     wm_name: Result<String, ()>,
     net_wm_name: Result<String, ()>,
     transient_for_wins: Result<Vec<xcb::Window>, ()>,
+    class_name: Result<String, ()>,
+    class: Result<String, ()>,
+}
+
+struct ClassInfo<T> {
+    name: Result<String, T>,
+    class: Result<String, T>,
+}
+
+impl<T> ClassInfo<T> {
+
+    fn err(t: T) -> ClassInfo<T> {
+        ClassInfo{ name: Err(t), class: Err(t), }
+    }
+
+    fn from_res_strings<E, F>(name: Result<String, E>, class: Result<String, E>, f: F) -> ClassInfo<T> where
+        F: FnOnce(E) -> T,
+    {
+        ClassInfo {
+            name: name.map_err(f),
+            class: class.map_err(f)
+        }
+    }
+
+    fn from_raw_data_with_index<F: Fn(std::string::FromUtf8Error) -> T>(raw: &[u8], index: usize, utf8_err_mapper: F) -> ClassInfo<T> {
+        ClassInfo {
+            name: String::from_utf8(raw[0..index].to_vec()).map_err(utf8_err_mapper),
+            class: String::from_utf8(raw[index + 1 .. raw.len() - 1].to_vec()).map_err(utf8_err_mapper),
+        }
+    }
+
+    fn from_raw_data<F: Fn(std::string::FromUtf8Error) -> T>(raw: &[u8], no_index_err: T, utf8_err_mapper: F) -> ClassInfo<T> {
+        let option_index = raw.iter().position(|&b| b == 0);
+        match option_index {
+            None => ClassInfo::err(no_index_err),
+            Some(index) =>
+                ClassInfo::from_raw_data_with_index(raw, index, utf8_err_mapper),
+        }
+    }
+
+    fn from_raw<F: Fn(std::string::FromUtf8Error) -> T>(res_raw: Result<xcb::GetPropertyReply, T>, no_index_err: T, utf8_err_mapper: F) -> ClassInfo<T> {
+        match res_raw {
+            Err(t) => ClassInfo::err(t),
+            Ok(raw) => {
+                let all = raw.value::<u8>();
+                ClassInfo::from_raw_data(all, no_index_err, utf8_err_mapper)
+            }
+        }
+    }
 }
 
 fn get_win_props(win_prop_cookies: WinPropCookies) -> WinProps {
@@ -120,16 +169,12 @@ fn get_win_props(win_prop_cookies: WinPropCookies) -> WinProps {
         .map_err(|generic_err| ())
         .map(|trans_reply| trans_reply.value().to_vec());
 
-    let class = win_prop_cookies
+    let ClassInfo{name: class_name, class} =
+        ClassInfo::from_raw(win_prop_cookies
         .wm_class
-        .get_reply()
-        .map_err(|generic_err| ())
-        .map(|class_reply| {
-            // TODO: Continue writing this...
-            class_reply
-        });
+        .get_reply().map_err(|generic_error| ()), (), |from_utf8_err| ());
 
-    WinProps { wm_name, net_wm_name, transient_for_wins }
+    WinProps { wm_name, net_wm_name, transient_for_wins, class_name, class }
 }
 
 impl Plugin for WindowTitles {
