@@ -75,17 +75,6 @@ fn main() {
         let net_wm_name = String::from_utf8(net_wm_name_vec.clone())
             .unwrap_or(String::from("(net_wm_name not UTF8...)"));
 
-        // utils::get_property(
-        //     connection,
-        //     self.handle,
-        //     utils::get_atom(&connection, "_NET_WM_NAME")?,
-        //     utils::get_atom(&connection, "UTF8_STRING")?,
-        // ).map(|r| {
-        //     str::from_utf8(r.value())
-        //         .expect("Atom with type UTF&_STRING wasn't valid utf-8")
-        //         .into()
-        // })
-
         let prop_class = xcb::xproto::get_property(
             &conn,
             false,

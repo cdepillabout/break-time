@@ -1,4 +1,3 @@
-
 use super::Plugin;
 
 pub struct WindowTitles {
@@ -12,23 +11,25 @@ impl WindowTitles {
     pub fn new() -> Result<Self, ()> {
         let (conn, screen_num) = xcb::Connection::connect(None).unwrap();
 
-        let net_wm_name_atom_cookie = xcb::intern_atom(&conn, false, "_NET_WM_NAME");
-        let utf8_string_atom_cookie = xcb::intern_atom(&conn, false, "UTF8_STRING");
+        let net_wm_name_atom_cookie =
+            xcb::intern_atom(&conn, false, "_NET_WM_NAME");
+        let utf8_string_atom_cookie =
+            xcb::intern_atom(&conn, false, "UTF8_STRING");
 
-        let net_wm_name_atom = net_wm_name_atom_cookie.get_reply().map_err(|_| ())?.atom();
-        let utf8_string_atom = utf8_string_atom_cookie.get_reply().map_err(|_| ())?.atom();
+        let net_wm_name_atom =
+            net_wm_name_atom_cookie.get_reply().map_err(|_| ())?.atom();
+        let utf8_string_atom =
+            utf8_string_atom_cookie.get_reply().map_err(|_| ())?.atom();
 
-        Ok(
-            WindowTitles {
-                conn,
-                screen_num,
-                net_wm_name_atom,
-                utf8_string_atom,
-            }
-        )
+        Ok(WindowTitles {
+            conn,
+            screen_num,
+            net_wm_name_atom,
+            utf8_string_atom,
+        })
     }
 
-    fn request_window_props<'a>(&'a self, win: xcb::Window) -> WindowPropCookies<'a> {
+    fn request_win_props<'a>(&'a self, win: xcb::Window) -> WinPropCookies<'a> {
         let wm_name_cookie = xcb::xproto::get_property(
             &self.conn,
             false,
@@ -69,7 +70,7 @@ impl WindowTitles {
             PROP_LENGTH_TO_GET,
         );
 
-        WindowPropCookies {
+        WinPropCookies {
             wm_name: wm_name_cookie,
             net_wm_name: net_wm_name_cookie,
             wm_class: wm_class_cookie,
@@ -81,21 +82,62 @@ impl WindowTitles {
 const PROP_STARTING_OFFSET: u32 = 0;
 const PROP_LENGTH_TO_GET: u32 = 2048;
 
-struct WindowPropCookies<'a> {
+struct WinPropCookies<'a> {
     wm_name: xcb::xproto::GetPropertyCookie<'a>,
     net_wm_name: xcb::xproto::GetPropertyCookie<'a>,
     wm_class: xcb::xproto::GetPropertyCookie<'a>,
     wm_transient_for: xcb::xproto::GetPropertyCookie<'a>,
 }
 
-struct WindowProp {
+struct WinProps {
+    wm_name: Result<String, ()>,
+    net_wm_name: Result<String, ()>,
+    transient_for_wins: Result<Vec<xcb::Window>, ()>,
+}
+
+fn get_win_props(win_prop_cookies: WinPropCookies) -> WinProps {
+    let wm_name = win_prop_cookies
+        .wm_name
+        .get_reply()
+        .map_err(|generic_err| ())
+        .and_then(|wm_name_reply| {
+            let wm_name_vec = wm_name_reply.value().to_vec();
+            String::from_utf8(wm_name_vec).map_err(|from_utf8_err| ())
+        });
+
+    let net_wm_name = win_prop_cookies
+        .net_wm_name
+        .get_reply()
+        .map_err(|generic_err| ())
+        .and_then(|net_wm_name_reply| {
+            let net_wm_name_vec = net_wm_name_reply.value().to_vec();
+            String::from_utf8(net_wm_name_vec).map_err(|from_utf8_err| ())
+        });
+
+    let transient_for_wins = win_prop_cookies
+        .wm_transient_for
+        .get_reply()
+        .map_err(|generic_err| ())
+        .map(|trans_reply| trans_reply.value().to_vec());
+
+    let class = win_prop_cookies
+        .wm_class
+        .get_reply()
+        .map_err(|generic_err| ())
+        .map(|class_reply| {
+            // TODO: Continue writing this...
+            class_reply
+        });
+
+    WinProps { wm_name, net_wm_name, transient_for_wins }
 }
 
 impl Plugin for WindowTitles {
     fn can_break_now(&self) -> Result<bool, ()> {
         let setup: xcb::Setup = self.conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
-        let screen: xcb::Screen = roots.nth(self.screen_num as usize).ok_or(())?;
+        let screen: xcb::Screen =
+            roots.nth(self.screen_num as usize).ok_or(())?;
         let root_window: xcb::Window = screen.root();
 
         let query_tree_reply: xcb::QueryTreeReply =
@@ -103,11 +145,16 @@ impl Plugin for WindowTitles {
                 .get_reply()
                 .map_err(|_| ())?;
 
-        let windows: &[u32] = query_tree_reply.children();
+        let wins: &[u32] = query_tree_reply.children();
 
-        let cookies: Vec<WindowPropCookies> = windows.iter().map(|win| self.request_window_props(*win)).collect();
+        let cookies: Vec<WinPropCookies> = wins
+            .iter()
+            .map(|win| self.request_win_props(*win))
+            .collect();
 
-        // cookies.iter().map(
+        let window_props = cookies
+            .into_iter()
+            .map(|win_prop_cookies| get_win_props(win_prop_cookies));
 
         // TODO: Finish writing this.
 
