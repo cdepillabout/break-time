@@ -91,7 +91,8 @@ impl WindowTitles {
         &self,
         wins: &[xcb::Window],
     ) -> Vec<WinProps> {
-        let win_prop_cookies: Vec<WinPropCookies> = self.request_all_win_props(wins);
+        let win_prop_cookies: Vec<WinPropCookies> =
+            self.request_all_win_props(wins);
         WinProps::get_all(win_prop_cookies)
     }
 
@@ -127,7 +128,9 @@ impl WindowTitles {
 
     fn can_break(&self) -> Result<CanBreak, ()> {
         let all_win_props: Vec<WinProps> = self.get_all_win_props()?;
-        CanBreak::from_bool(all_win_props.into_iter().all(|win_props| self.can_break_win_prop(win_props).into_bool()))
+        Ok(CanBreak::from_bool(all_win_props.iter().all(|win_props| {
+            self.can_break_win_prop(win_props).into_bool()
+        })))
     }
 }
 
@@ -150,9 +153,9 @@ struct WinProps {
 }
 
 impl WinProps {
-
     fn get_all(all_win_prop_cookies: Vec<WinPropCookies>) -> Vec<Self> {
-        all_win_prop_cookies.into_iter()
+        all_win_prop_cookies
+            .into_iter()
             .map(|win_prop_cookies| WinProps::get(win_prop_cookies))
             .collect()
     }
