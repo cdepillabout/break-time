@@ -30,9 +30,12 @@ impl Scheduler {
     pub fn run(&self) {
         let time_until_break = self.time_until_break;
         let sender = self.sender.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(time_until_break);
-            sender.send(Msg::StartBreak);
-        });
+        let sched = self.clone();
+        std::thread::spawn(move || sched.wait_until_break());
+    }
+
+    pub fn wait_until_break(&self) {
+        std::thread::sleep(self.time_until_break);
+        self.sender.send(Msg::StartBreak);
     }
 }
