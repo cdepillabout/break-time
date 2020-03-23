@@ -97,8 +97,8 @@ impl WindowTitles {
     }
 
     fn get_all_win_props(&self) -> Result<Vec<WinProps>, ()> {
-        let wins: &[u32] = self.get_all_wins()?;
-        Ok(self.get_all_win_props_from_wins(wins))
+        let wins = self.get_all_wins()?;
+        Ok(self.get_all_win_props_from_wins(&wins))
     }
 
     fn get_root_win(&self) -> Result<xcb::Window, ()> {
@@ -109,7 +109,7 @@ impl WindowTitles {
         Ok(screen.root())
     }
 
-    fn get_all_wins(&self) -> Result<&[xcb::Window], ()> {
+    fn get_all_wins(&self) -> Result<Vec<xcb::Window>, ()> {
         let root_win = self.get_root_win()?;
 
         let query_tree_reply: xcb::QueryTreeReply =
@@ -117,7 +117,7 @@ impl WindowTitles {
                 .get_reply()
                 .map_err(|_| ())?;
 
-        Ok(query_tree_reply.children())
+        Ok(query_tree_reply.children().to_vec())
     }
 
     fn can_break_win_prop(&self, win_props: &WinProps) -> CanBreak {
@@ -214,10 +214,10 @@ struct ClassInfo<T> {
     class: Result<String, T>,
 }
 
-impl<T> ClassInfo<T> {
+impl<T: Clone> ClassInfo<T> {
     fn err(t: T) -> ClassInfo<T> {
         ClassInfo {
-            name: Err(t),
+            name: Err(t.clone()),
             class: Err(t),
         }
     }
@@ -229,7 +229,7 @@ impl<T> ClassInfo<T> {
     ) -> ClassInfo<T> {
         ClassInfo {
             name: String::from_utf8(raw[0..index].to_vec())
-                .map_err(utf8_err_mapper),
+                .map_err(&utf8_err_mapper),
             class: String::from_utf8(raw[index + 1..raw.len() - 1].to_vec())
                 .map_err(utf8_err_mapper),
         }

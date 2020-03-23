@@ -35,7 +35,7 @@ pub fn default_main() {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let scheduler = Scheduler::new(sender.clone());
+    let scheduler = Scheduler::new(sender.clone()).expect("Couldn't create a scheduler!");
 
     scheduler.run();
 
