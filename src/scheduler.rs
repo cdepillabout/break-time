@@ -18,13 +18,13 @@ pub struct Scheduler {
 const DEFAULT_TIME_UNTIL_BREAK: Duration = Duration::from_secs(1 * 10);
 
 impl Scheduler {
-    pub fn new(sender: glib::Sender<Msg>) -> Self {
-        let window_title_plugin = plugins::WindowTitles::new();
-        Scheduler {
+    pub fn new(sender: glib::Sender<Msg>) -> Result<Self, ()> {
+        let window_title_plugin = plugins::WindowTitles::new()?;
+        Ok(Scheduler {
             sender,
             plugins: Arc::new(vec![Box::new(window_title_plugin)]),
             time_until_break: DEFAULT_TIME_UNTIL_BREAK,
-        }
+        })
     }
 
     pub fn run(&self) {

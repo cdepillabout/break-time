@@ -123,7 +123,8 @@ impl WindowTitles {
     fn can_break_win_prop(&self, win_props: &WinProps) -> CanBreak {
         // TODO: Finish writing this.
         // Actually check the windows title and stuff to see if it matches.
-        todo!()
+        dbg!(win_props);
+        CanBreak::Yes
     }
 
     fn can_break(&self) -> Result<CanBreak, ()> {
@@ -144,6 +145,7 @@ struct WinPropCookies<'a> {
     wm_transient_for: xcb::xproto::GetPropertyCookie<'a>,
 }
 
+#[derive(Debug)]
 struct WinProps {
     wm_name: Result<String, ()>,
     net_wm_name: Result<String, ()>,
