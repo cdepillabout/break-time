@@ -124,6 +124,27 @@ impl WindowTitles {
         // TODO: Finish writing this.
         // Actually check the windows title and stuff to see if it matches.
         dbg!(win_props);
+
+        // Here's an eaxmple:
+        //
+        // [src/scheduler/plugins/window_titles.rs:126] win_props = WinProps {
+    // wm_name: Ok(
+    //     "Today: Todoist - Mozilla Firefox",
+    // ),
+    // net_wm_name: Ok(
+    //     "Today: Todoist - Mozilla Firefox",
+    // ),
+    // transient_for_wins: Ok(
+    //     [],
+    // ),
+    // class_name: Ok(
+    //     "Navigator",
+    // ),
+    // class: Ok(
+    //     "Firefox",
+    // ),
+// }
+
         CanBreak::Yes
     }
 

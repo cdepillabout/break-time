@@ -1,10 +1,9 @@
-
 mod plugins;
 
 use plugins::{CanBreak, Plugin};
 
-use std::time::Duration;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use super::Msg;
 
@@ -14,12 +13,16 @@ pub struct Plugins(Arc<Vec<Box<dyn Plugin + Send + Sync>>>);
 impl Plugins {
     fn new() -> Result<Self, ()> {
         let window_title_plugin = plugins::WindowTitles::new()?;
-        let all_plugins: Vec<Box<dyn Plugin + Send + Sync>> = vec![Box::new(window_title_plugin)];
+        let all_plugins: Vec<Box<dyn Plugin + Send + Sync>> =
+            vec![Box::new(window_title_plugin)];
         Ok(Plugins(Arc::new(all_plugins)))
     }
 
     fn can_break_now(&self) -> (Option<CanBreak>, Vec<()>) {
-        self.iter().fold((None, vec![]), |(opt_old_can_break, mut err_accum): (Option<CanBreak>, Vec<()>), plugin: &Box<dyn Plugin + Send + Sync>| {
+        fn f(
+            (opt_old_can_break, mut err_accum): (Option<CanBreak>, Vec<()>),
+            plugin: &Box<dyn Plugin + Send + Sync>,
+        ) -> (Option<CanBreak>, Vec<()>) {
             let res_can_break = plugin.can_break_now();
             match res_can_break {
                 Err(err) => {
@@ -27,13 +30,18 @@ impl Plugins {
                     (opt_old_can_break, err_accum)
                 }
                 Ok(can_break) => {
-                    let new_can_break = opt_old_can_break.map_or(can_break, |old_can_break| can_break.combine(&old_can_break));
+                    let new_can_break = opt_old_can_break
+                        .map_or(can_break, |old_can_break| {
+                            can_break.combine(&old_can_break)
+                        });
                     (Some(new_can_break), err_accum)
                 }
             }
-        })
-    }
+        }
 
+        self.iter()
+            .fold((None, vec![]), |accum, plugin| f(accum, plugin))
+    }
 }
 
 impl std::ops::Deref for Plugins {
