@@ -121,38 +121,28 @@ impl WindowTitles {
     }
 
     fn can_break_win_prop(&self, win_props: &WinProps) -> CanBreak {
-        // TODO: Finish writing this.
-        // Actually check the windows title and stuff to see if it matches.
-        dbg!(win_props);
-
-        // Here's an eaxmple:
-        //
-        // [src/scheduler/plugins/window_titles.rs:126] win_props = WinProps {
-    // wm_name: Ok(
-    //     "Today: Todoist - Mozilla Firefox",
-    // ),
-    // net_wm_name: Ok(
-    //     "Today: Todoist - Mozilla Firefox",
-    // ),
-    // transient_for_wins: Ok(
-    //     [],
-    // ),
-    // class_name: Ok(
-    //     "Navigator",
-    // ),
-    // class: Ok(
-    //     "Firefox",
-    // ),
-// }
+        if let Ok(class) = &win_props.class {
+            if let Ok(class_name) = &win_props.class_name {
+                if let Ok(net_wm_name) = &win_props.net_wm_name {
+                    if class == "Firefox" && class_name == "Navigator" {
+                        if net_wm_name.starts_with("Meet") {
+                            return CanBreak::No;
+                        }
+                    }
+                }
+            }
+        }
 
         CanBreak::Yes
     }
 
     fn can_break(&self) -> Result<CanBreak, ()> {
         let all_win_props: Vec<WinProps> = self.get_all_win_props()?;
-        Ok(CanBreak::from_bool(all_win_props.iter().all(|win_props| {
+        let can_break_bool =all_win_props.iter().all(|win_props| {
             self.can_break_win_prop(win_props).into_bool()
-        })))
+        });
+        let can_break_res = CanBreak::from_bool(can_break_bool);
+        Ok(can_break_res)
     }
 }
 
