@@ -13,8 +13,9 @@ pub struct Plugins(Arc<Vec<Box<dyn Plugin + Send + Sync>>>);
 impl Plugins {
     fn new() -> Result<Self, ()> {
         let window_title_plugin = plugins::WindowTitles::new()?;
+        let google_calendar_plugin = plugins::GoogleCalendar::new()?;
         let all_plugins: Vec<Box<dyn Plugin + Send + Sync>> =
-            vec![Box::new(window_title_plugin)];
+            vec![Box::new(window_title_plugin), Box::new(google_calendar_plugin)];
         Ok(Plugins(Arc::new(all_plugins)))
     }
 
@@ -39,6 +40,9 @@ impl Plugins {
             }
         }
 
+        // TODO: I probably want to parallelize calling can_break_now()
+        // for each of the plugins, because they may take a non-trivial
+        // amount of time deciding whether or not to break.
         self.iter()
             .fold((None, vec![]), |accum, plugin| f(accum, plugin))
     }

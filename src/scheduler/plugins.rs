@@ -1,5 +1,7 @@
+mod google_calendar;
 mod window_titles;
 
+pub use google_calendar::GoogleCalendar;
 pub use window_titles::WindowTitles;
 
 #[derive(Copy, Clone, Debug)]
