@@ -74,12 +74,14 @@ fn main() {
             ..Default::default()
         };
 
-    let mut http_client_for_auth = hyper::Client::with_connector(
+    let http_client_for_auth = hyper::Client::with_connector(
         hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
     );
-    let mut http_client_for_cal = hyper::Client::with_connector(
+    let http_client_for_cal = hyper::Client::with_connector(
         hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
     );
+
+    let port = get_available_port().expect("Able to get the port...");
 
     println!("before creating auth...");
     let auth = Authenticator::new(
@@ -87,42 +89,19 @@ fn main() {
         MyAuthDel,
         http_client_for_auth,
         disk_token_storage,
-        Some(yup_oauth2::FlowType::InstalledRedirect(8080)),
+        Some(yup_oauth2::FlowType::InstalledRedirect(port.into())),
     );
     println!("after creating auth...");
 
-    let mut hub = CalendarHub::new(http_client_for_cal, auth);
+    let hub = CalendarHub::new(http_client_for_cal, auth);
 
     println!("after creating hub...");
     // As the method needs a request, you would usually fill it with the desired information
     // into the respective structure. Some of the parts shown here might not be applicable !
     // Values shown here are possibly random and not representative !
-    let mut req = Channel::default();
+    let req = Channel::default();
 
     println!("after creating channel...");
-
-    // You can configure optional parameters by calling the respective setters at will, and
-    // execute the final call using `doit()`.
-    // Values shown here are possibly random and not representative !
-    // let result = hub.events().watch(req, "calendarId")
-    //             .updated_min("ea")
-    //             .time_zone("no")
-    //             .time_min("justo")
-    //             .time_max("justo")
-    //             .sync_token("et")
-    //             .single_events(true)
-    //             .show_hidden_invitations(true)
-    //             .show_deleted(false)
-    //             .add_shared_extended_property("Lorem")
-    //             .q("et")
-    //             .add_private_extended_property("duo")
-    //             .page_token("aliquyam")
-    //             .order_by("sea")
-    //             .max_results(-55)
-    //             .max_attendees(-75)
-    //             .i_cal_uid("erat")
-    //             .always_include_email(false)
-    //             .doit();
 
     let (_, calendar_list_res) = hub
         .calendar_list()
