@@ -2,9 +2,7 @@ use super::{CanBreak, Plugin};
 
 use std::net::TcpListener;
 
-use google_calendar3::CalendarHub;
-use google_calendar3::Channel;
-use google_calendar3::{Error, Scope};
+use google_calendar3::{CalendarHub, CalendarListEntry, Channel, Error, Scope};
 use yup_oauth2::{
     ApplicationSecret, Authenticator, AuthenticatorDelegate, DefaultAuthenticatorDelegate,
     DiskTokenStorage, Retry,
@@ -15,6 +13,8 @@ fn get_available_port() -> Option<u16> {
 }
 
 pub struct GoogleCalendar {
+    hub: CalendarHub<hyper::Client, Authenticator<DefaultAuthenticatorDelegate, DiskTokenStorage, hyper::Client>>,
+    calendar_ids: Vec<String>,
 }
 
 impl GoogleCalendar {
@@ -24,7 +24,7 @@ impl GoogleCalendar {
             .place_config_file("google-oauth-token").map_err(|io_err| ())?;
         let google_oauth_token_path_string =
             google_oauth_token_path.to_string_lossy().into_owned();
-        let disk_token_storage =
+        let disk_token_storage: DiskTokenStorage =
             DiskTokenStorage::new(&google_oauth_token_path_string)
                 .expect("Couldn't create a file to hold the google oauth token");
 
@@ -45,16 +45,16 @@ impl GoogleCalendar {
                 ..Default::default()
             };
 
-        let http_client_for_auth = hyper::Client::with_connector(
+        let http_client_for_auth: hyper::Client = hyper::Client::with_connector(
             hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
         );
-        let http_client_for_cal = hyper::Client::with_connector(
+        let http_client_for_cal: hyper::Client = hyper::Client::with_connector(
             hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
         );
 
         let first_available_port = get_available_port().ok_or(())?;
 
-        let auth = Authenticator::new(
+        let auth: Authenticator<DefaultAuthenticatorDelegate, DiskTokenStorage, hyper::Client> = Authenticator::new(
             &secret,
             DefaultAuthenticatorDelegate,
             http_client_for_auth,
@@ -62,13 +62,54 @@ impl GoogleCalendar {
             Some(yup_oauth2::FlowType::InstalledRedirect(first_available_port.into())),
         );
 
-        let hub = CalendarHub::new(http_client_for_cal, auth);
+        let hub: CalendarHub<hyper::Client, Authenticator<DefaultAuthenticatorDelegate, DiskTokenStorage, hyper::Client>> = CalendarHub::new(http_client_for_cal, auth);
+
+        let (_, calendar_list_res) = hub
+            .calendar_list()
+            .list()
+            .add_scope(Scope::Readonly)
+            .add_scope(Scope::EventReadonly)
+            .doit()
+            .expect("couldn't get a response from calendar_list");
+
+        let calendars = calendar_list_res
+            .items
+            .expect("There should be some calendars available");
+
+        let calendar_ids: Vec<String> = calendars
+            .into_iter()
+            .map(|calendar: CalendarListEntry| {
+                calendar
+                    .id
+                    .expect("Calendars should always have ids")
+            })
+            .collect();
 
         Ok(GoogleCalendar {
+            hub,
+            calendar_ids
         })
     }
 
     fn can_break(&self) -> Result<CanBreak, ()> {
+        let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
+        let ten_minutes_ago: chrono::DateTime<chrono::Utc> = now - chrono::Duration::minutes(10);
+        let in_twenty_mins: chrono::DateTime<chrono::Utc> = now + chrono::Duration::minutes(20);
+        println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
+
+        for calendar_id in self.calendar_ids {
+            let result = self.hub
+                .events()
+                .list(&calendar_id)
+                .add_scope(Scope::Readonly)
+                .add_scope(Scope::EventReadonly)
+                // all events the occur over the next 20 minutes
+                .time_min(&ten_minutes_ago.to_rfc3339())
+                .time_max(&in_twenty_mins.to_rfc3339())
+                .doit();
+            print!("\n\nevents for {}: {:?}", calendar_id, result);
+        }
+
         Ok(CanBreak::Yes)
     }
 }
