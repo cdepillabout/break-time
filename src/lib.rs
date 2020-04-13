@@ -7,8 +7,11 @@ mod prelude;
 mod tray;
 pub mod ui;
 
-use scheduler::Scheduler;
+use std::sync::mpsc::{Sender};
+
 use prelude::*;
+use scheduler::Scheduler;
+
 
 
 pub enum Msg {
@@ -16,7 +19,7 @@ pub enum Msg {
     EndBreak,
 }
 
-fn handle_msg_recv(sender: glib::Sender<Msg>, scheduler: Scheduler, msg: Msg) {
+fn handle_msg_recv(sender: glib::Sender<Msg>, scheduler_sender: Sender<scheduler::Msg>, msg: Msg) {
     match msg {
         Msg::StartBreak => {
             println!("starting break");
@@ -24,7 +27,7 @@ fn handle_msg_recv(sender: glib::Sender<Msg>, scheduler: Scheduler, msg: Msg) {
         }
         Msg::EndBreak => {
             println!("break ended");
-            scheduler.run();
+            scheduler_sender.send(scheduler::Msg::Start);
         }
     }
 }
@@ -35,16 +38,18 @@ pub fn default_main() {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let scheduler = Scheduler::new(sender.clone()).expect("Couldn't create a scheduler!");
+    // let scheduler = Scheduler::new(sender.clone()).expect("Couldn't create a scheduler!");
 
-    scheduler.run();
+    // scheduler.run();
+
+    let scheduler_sender = Scheduler::run(sender.clone());
 
     tray::show();
 
     receiver.attach(
         None,
         move |msg| {
-            handle_msg_recv(sender.clone(), scheduler.clone(), msg);
+            handle_msg_recv(sender.clone(), scheduler_sender.clone(), msg);
             glib::source::Continue(true)
         },
     );

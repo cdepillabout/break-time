@@ -2,27 +2,29 @@ mod plugins;
 
 use plugins::{CanBreak, Plugin};
 
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{channel, Sender};
 use std::time::Duration;
 
-use super::Msg;
+#[derive(Copy, Clone, Debug)]
+pub enum Msg {
+    Start,
+}
 
-#[derive(Clone)]
-pub struct Plugins(Arc<Vec<Box<dyn Plugin + Send + Sync>>>);
+pub struct Plugins(Vec<Box<dyn Plugin>>);
 
 impl Plugins {
     fn new() -> Result<Self, ()> {
         let window_title_plugin = plugins::WindowTitles::new()?;
         let google_calendar_plugin = plugins::GoogleCalendar::new()?;
-        let all_plugins: Vec<Box<dyn Plugin + Send + Sync>> =
+        let all_plugins: Vec<Box<dyn Plugin>> =
             vec![Box::new(window_title_plugin), Box::new(google_calendar_plugin)];
-        Ok(Plugins(Arc::new(all_plugins)))
+        Ok(Plugins(all_plugins))
     }
 
     fn can_break_now(&self) -> (Option<CanBreak>, Vec<()>) {
         fn f(
             (opt_old_can_break, mut err_accum): (Option<CanBreak>, Vec<()>),
-            plugin: &Box<dyn Plugin + Send + Sync>,
+            plugin: &Box<dyn Plugin>,
         ) -> (Option<CanBreak>, Vec<()>) {
             let res_can_break = plugin.can_break_now();
             match res_can_break {
@@ -49,16 +51,15 @@ impl Plugins {
 }
 
 impl std::ops::Deref for Plugins {
-    type Target = [Box<dyn Plugin + Send + Sync>];
+    type Target = [Box<dyn Plugin>];
 
-    fn deref(&self) -> &[Box<dyn Plugin + Send + Sync>] {
+    fn deref(&self) -> &[Box<dyn Plugin>] {
         &self.0
     }
 }
 
-#[derive(Clone)]
 pub struct Scheduler {
-    sender: glib::Sender<Msg>,
+    sender: glib::Sender<super::Msg>,
     plugins: Plugins,
     time_until_break: Duration,
 }
@@ -66,7 +67,7 @@ pub struct Scheduler {
 const DEFAULT_TIME_UNTIL_BREAK: Duration = Duration::from_secs(1 * 10);
 
 impl Scheduler {
-    pub fn new(sender: glib::Sender<Msg>) -> Result<Self, ()> {
+    pub fn new(sender: glib::Sender<super::Msg>) -> Result<Self, ()> {
         Ok(Scheduler {
             sender,
             plugins: Plugins::new()?,
@@ -74,9 +75,20 @@ impl Scheduler {
         })
     }
 
-    pub fn run(&self) {
-        let sched = self.clone();
-        std::thread::spawn(move || sched.wait_until_break());
+    pub fn run(sender: glib::Sender<super::Msg>) -> Sender<Msg> {
+        let (sched_sender, sched_receiver) = channel();
+        std::thread::spawn(move || {
+            // TODO: Need to actually handle this error.
+            let sched = Scheduler::new(sender).expect("Could not initialize plugins.");
+            loop {
+                sched.wait_until_break();
+
+                // The only kind of message we have so far is Start, which means we should just
+                // continue running this loop.
+                let _msg = sched_receiver.recv().expect("Error receiving value in Scheduler.");
+            }
+        });
+        sched_sender
     }
 
     pub fn wait_until_break(&self) {
@@ -88,7 +100,7 @@ impl Scheduler {
                     None => panic!("If there are no errors, then we should always get a response to can_break"),
                     Some(can_break) => {
                         if can_break.into_bool() {
-                            self.sender.send(Msg::StartBreak);
+                            self.sender.send(super::Msg::StartBreak);
                             break;
                         } else {
                             println!("Could not break right now, so sleeping again...");
