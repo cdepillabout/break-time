@@ -2,12 +2,12 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![warn(clippy::nursery)]
 
-mod scheduler;
 mod prelude;
+mod scheduler;
 mod tray;
 pub mod ui;
 
-use std::sync::mpsc::{Sender};
+use std::sync::mpsc::Sender;
 
 use prelude::*;
 use scheduler::Scheduler;
@@ -17,7 +17,11 @@ pub enum Msg {
     EndBreak,
 }
 
-fn handle_msg_recv(sender: glib::Sender<Msg>, scheduler_sender: Sender<scheduler::Msg>, msg: Msg) {
+fn handle_msg_recv(
+    sender: glib::Sender<Msg>,
+    scheduler_sender: Sender<scheduler::Msg>,
+    msg: Msg,
+) {
     match msg {
         Msg::StartBreak => {
             println!("starting break");
@@ -45,13 +49,10 @@ pub fn default_main() {
 
     tray::show();
 
-    receiver.attach(
-        None,
-        move |msg| {
-            handle_msg_recv(sender.clone(), scheduler_sender.clone(), msg);
-            glib::source::Continue(true)
-        },
-    );
+    receiver.attach(None, move |msg| {
+        handle_msg_recv(sender.clone(), scheduler_sender.clone(), msg);
+        glib::source::Continue(true)
+    });
 
     gtk::main();
 }

@@ -128,7 +128,7 @@ fn main() {
         //
         // Maybe I need to make sure I don't include the final \0 in the title????
         // if class_name == "Navigator" {
-            println!("\tchild: {}\n\t\ttrans for wins: {:?}\n\t\tclass: {}\n\t\tclass name: {}\n\t\tclass_format: {}\n\t\tclass_type: {}\n\t\ttitle_format: {}\n\t\ttitle_type: {}\n\t\tnet_wm_name_format: {}\n\t\tnet_wm_name_type: {}\n\t\ttitle: {}\n\t\tnet_wm_name: {}\n\t\ttitle_vec:       {:?}\n\t\tnet_wm_name_vec: {:?}", win, trans_for_wins, &class, &class_name, class_format, class_type, title_format, title_type, net_wm_name_format, net_wm_name_type, title, net_wm_name, title_vec, net_wm_name_vec);
+        println!("\tchild: {}\n\t\ttrans for wins: {:?}\n\t\tclass: {}\n\t\tclass name: {}\n\t\tclass_format: {}\n\t\tclass_type: {}\n\t\ttitle_format: {}\n\t\ttitle_type: {}\n\t\tnet_wm_name_format: {}\n\t\tnet_wm_name_type: {}\n\t\ttitle: {}\n\t\tnet_wm_name: {}\n\t\ttitle_vec:       {:?}\n\t\tnet_wm_name_vec: {:?}", win, trans_for_wins, &class, &class_name, class_format, class_type, title_format, title_type, net_wm_name_format, net_wm_name_type, title, net_wm_name, title_vec, net_wm_name_vec);
         // }
     }
 }

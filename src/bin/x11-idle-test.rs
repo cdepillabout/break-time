@@ -1,4 +1,3 @@
-
 fn main() {
     // let xid = gdk_sys::gdk_x11_window_get_xid(gdk_window.to_glib_none().0);
 
@@ -10,8 +9,14 @@ fn main() {
 
     println!("Root window: {}", &root_window);
 
-    let idle_query_res = xcb::screensaver::query_info(&conn, root_window).get_reply().unwrap();
+    let idle_query_res = xcb::screensaver::query_info(&conn, root_window)
+        .get_reply()
+        .unwrap();
 
-    println!("state: {}, ms_since_user_input: {}, kind: {}", idle_query_res.state(), idle_query_res.ms_since_user_input(), idle_query_res.kind());
-
+    println!(
+        "state: {}, ms_since_user_input: {}, kind: {}",
+        idle_query_res.state(),
+        idle_query_res.ms_since_user_input(),
+        idle_query_res.kind()
+    );
 }

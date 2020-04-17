@@ -138,9 +138,9 @@ impl WindowTitles {
 
     fn can_break(&self) -> Result<CanBreak, ()> {
         let all_win_props: Vec<WinProps> = self.get_all_win_props()?;
-        let can_break_bool =all_win_props.iter().all(|win_props| {
-            self.can_break_win_prop(win_props).into_bool()
-        });
+        let can_break_bool = all_win_props
+            .iter()
+            .all(|win_props| self.can_break_win_prop(win_props).into_bool());
         let can_break_res = CanBreak::from_bool(can_break_bool);
         Ok(can_break_res)
     }

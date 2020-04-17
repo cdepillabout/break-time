@@ -4,7 +4,6 @@ pub use glib::translate::*;
 
 use crate::prelude::*;
 
-
 static IMG: &'static [u8] = include_bytes!("../imgs/clock.png");
 // static IMG2: &'static [u8] = include_bytes!("../imgs/clock-2.png");
 
@@ -54,8 +53,7 @@ where
         button: u32,
         activate_time: u32,
         g: glib_sys::gpointer,
-    )
-    where
+    ) where
         G: Fn(*mut gtk_sys::GtkStatusIcon, u32, u32) + 'static,
     {
         let g: &G = &*(g as *const G);
@@ -87,7 +85,9 @@ pub fn show() -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
     let pixbuf = pixbuf_loader
         .get_pixbuf()
         .expect("could not get a pixbuf from the loaded image");
-    pixbuf_loader.close().expect("could not close pixbuf loader");
+    pixbuf_loader
+        .close()
+        .expect("could not close pixbuf loader");
 
     let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = pixbuf.to_glib_none().0;
 
@@ -98,7 +98,10 @@ pub fn show() -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
 
         gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, pixbuf_sys);
 
-        gtk_sys::gtk_status_icon_set_tooltip_text(status_icon, "hello".to_glib_none().0);
+        gtk_sys::gtk_status_icon_set_tooltip_text(
+            status_icon,
+            "hello".to_glib_none().0,
+        );
 
         gtk_sys::gtk_status_icon_set_visible(status_icon, 1);
     }
@@ -115,7 +118,9 @@ pub fn show() -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
 
     connect_popup_menu(
         status_icon,
-        move |_status_icon: *mut gtk_sys::GtkStatusIcon, button, activate_time| {
+        move |_status_icon: *mut gtk_sys::GtkStatusIcon,
+              button,
+              activate_time| {
             let menu = gtk::Menu::new();
             let test_item = gtk::MenuItem::new_with_label("test test test");
             test_item.connect_activate(|_| println!("yo from menu item"));
@@ -124,7 +129,7 @@ pub fn show() -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
             menu.show_all();
             menu.popup_easy(button, activate_time);
             println!("after popup_menu!!!");
-        }
+        },
     );
 
     (status_icon, pixbuf)

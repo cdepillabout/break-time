@@ -67,7 +67,10 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(app_sender: glib::Sender<Msg>, sender: glib::Sender<Message>) -> Self {
+    pub fn new(
+        app_sender: glib::Sender<Msg>,
+        sender: glib::Sender<Message>,
+    ) -> Self {
         let monitors = Monitor::all();
         let monitors_num = monitors.len();
 

@@ -1,6 +1,6 @@
 use google_calendar3::CalendarHub;
 use google_calendar3::Channel;
-use google_calendar3::{Error, Scope, Result};
+use google_calendar3::{Error, Result, Scope};
 
 use std::default::Default;
 use std::net::TcpListener;
@@ -125,11 +125,16 @@ fn main() {
         })
         .collect();
 
-
     let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
-    let ten_minutes_ago: chrono::DateTime<chrono::Utc> = now - chrono::Duration::minutes(10);
-    let in_twenty_mins: chrono::DateTime<chrono::Utc> = now + chrono::Duration::minutes(20);
-    println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
+    let ten_minutes_ago: chrono::DateTime<chrono::Utc> =
+        now - chrono::Duration::minutes(10);
+    let in_twenty_mins: chrono::DateTime<chrono::Utc> =
+        now + chrono::Duration::minutes(20);
+    println!(
+        "now: {}, after twenty: {}",
+        now.to_rfc3339(),
+        in_twenty_mins.to_rfc3339()
+    );
 
     for calendar_id in calendar_ids {
         let result = hub

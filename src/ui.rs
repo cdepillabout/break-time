@@ -8,16 +8,15 @@ use glib::clone;
 use gtk::Inhibit;
 use std::time::{Duration, Instant};
 
+use super::Msg;
 use prelude::*;
 use state::{Message, State};
-use super::Msg;
 
 fn handle_msg_recv(state: &State, msg: Message) -> glib::source::Continue {
     // enable(state);
 
     match msg {
-        Message::Display =>
-            glib::source::Continue(true),
+        Message::Display => glib::source::Continue(true),
         Message::End => {
             for window in state.get_app_wins() {
                 window.hide();

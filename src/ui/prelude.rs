@@ -7,4 +7,3 @@ pub use std::convert::TryFrom;
 pub use std::io::prelude::*;
 
 pub use crate::ui::builder::BuilderExtManualGetObjectExpect;
-

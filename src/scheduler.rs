@@ -16,8 +16,10 @@ impl Plugins {
     fn new() -> Result<Self, ()> {
         let window_title_plugin = plugins::WindowTitles::new()?;
         let google_calendar_plugin = plugins::GoogleCalendar::new()?;
-        let all_plugins: Vec<Box<dyn Plugin>> =
-            vec![Box::new(window_title_plugin), Box::new(google_calendar_plugin)];
+        let all_plugins: Vec<Box<dyn Plugin>> = vec![
+            Box::new(window_title_plugin),
+            Box::new(google_calendar_plugin),
+        ];
         Ok(Plugins(all_plugins))
     }
 
@@ -79,14 +81,17 @@ impl Scheduler {
         let (sched_sender, sched_receiver) = channel();
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
-            let sched = Scheduler::new(sender).expect("Could not initialize plugins.");
+            let sched =
+                Scheduler::new(sender).expect("Could not initialize plugins.");
             println!("Scheduler initialized plugins");
             loop {
                 sched.wait_until_break();
 
                 // The only kind of message we have so far is Start, which means we should just
                 // continue running this loop.
-                let _msg = sched_receiver.recv().expect("Error receiving value in Scheduler.");
+                let _msg = sched_receiver
+                    .recv()
+                    .expect("Error receiving value in Scheduler.");
             }
         });
         sched_sender
@@ -94,9 +99,14 @@ impl Scheduler {
 
     pub fn wait_until_break(&self) {
         loop {
-            println!("Scheduler sleeping until break time ({:?})", self.time_until_break);
+            println!(
+                "Scheduler sleeping until break time ({:?})",
+                self.time_until_break
+            );
             std::thread::sleep(self.time_until_break);
-            println!("Scheduler finished sleeping, checking if it can break now...");
+            println!(
+                "Scheduler finished sleeping, checking if it can break now..."
+            );
             let (opt_can_break, errs) = self.plugins.can_break_now();
             if errs.is_empty() {
                 match opt_can_break {

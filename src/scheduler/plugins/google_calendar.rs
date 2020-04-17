@@ -2,17 +2,26 @@ use super::{CanBreak, Plugin};
 
 use std::net::TcpListener;
 
-use google_calendar3::{CalendarHub, CalendarListEntry, Channel, Error, Events, Scope};
+use google_calendar3::{
+    CalendarHub, CalendarListEntry, Channel, Error, Events, Scope,
+};
 use yup_oauth2::{
-    ApplicationSecret, Authenticator, AuthenticatorDelegate, DefaultAuthenticatorDelegate,
-    DiskTokenStorage, Retry,
+    ApplicationSecret, Authenticator, AuthenticatorDelegate,
+    DefaultAuthenticatorDelegate, DiskTokenStorage, Retry,
 };
 
 fn get_available_port() -> Option<u16> {
     (8080..65535).find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
 }
 
-type CalHub = CalendarHub<hyper::Client, Authenticator<DefaultAuthenticatorDelegate, DiskTokenStorage, hyper::Client>>;
+type CalHub = CalendarHub<
+    hyper::Client,
+    Authenticator<
+        DefaultAuthenticatorDelegate,
+        DiskTokenStorage,
+        hyper::Client,
+    >,
+>;
 
 pub struct GoogleCalendar {
     hub: CalHub,
@@ -21,14 +30,17 @@ pub struct GoogleCalendar {
 
 impl GoogleCalendar {
     pub fn new() -> Result<Self, ()> {
-        let xdg_dirs = xdg::BaseDirectories::with_prefix("break-time").map_err(|xdg_base_dir_err| ())?;
+        let xdg_dirs = xdg::BaseDirectories::with_prefix("break-time")
+            .map_err(|xdg_base_dir_err| ())?;
         let google_oauth_token_path = xdg_dirs
-            .place_config_file("google-oauth-token").map_err(|io_err| ())?;
+            .place_config_file("google-oauth-token")
+            .map_err(|io_err| ())?;
         let google_oauth_token_path_string =
             google_oauth_token_path.to_string_lossy().into_owned();
-        let disk_token_storage: DiskTokenStorage =
-            DiskTokenStorage::new(&google_oauth_token_path_string)
-                .expect("Couldn't create a file to hold the google oauth token");
+        let disk_token_storage: DiskTokenStorage = DiskTokenStorage::new(
+            &google_oauth_token_path_string,
+        )
+        .expect("Couldn't create a file to hold the google oauth token");
 
         let secret: ApplicationSecret =
             ApplicationSecret {
@@ -56,15 +68,28 @@ impl GoogleCalendar {
 
         let first_available_port = get_available_port().ok_or(())?;
 
-        let auth: Authenticator<DefaultAuthenticatorDelegate, DiskTokenStorage, hyper::Client> = Authenticator::new(
+        let auth: Authenticator<
+            DefaultAuthenticatorDelegate,
+            DiskTokenStorage,
+            hyper::Client,
+        > = Authenticator::new(
             &secret,
             DefaultAuthenticatorDelegate,
             http_client_for_auth,
             disk_token_storage,
-            Some(yup_oauth2::FlowType::InstalledRedirect(first_available_port.into())),
+            Some(yup_oauth2::FlowType::InstalledRedirect(
+                first_available_port.into(),
+            )),
         );
 
-        let hub: CalendarHub<hyper::Client, Authenticator<DefaultAuthenticatorDelegate, DiskTokenStorage, hyper::Client>> = CalendarHub::new(http_client_for_cal, auth);
+        let hub: CalendarHub<
+            hyper::Client,
+            Authenticator<
+                DefaultAuthenticatorDelegate,
+                DiskTokenStorage,
+                hyper::Client,
+            >,
+        > = CalendarHub::new(http_client_for_cal, auth);
 
         let (_, calendar_list_res) = hub
             .calendar_list()
@@ -81,22 +106,19 @@ impl GoogleCalendar {
         let calendar_ids: Vec<String> = calendars
             .into_iter()
             .map(|calendar: CalendarListEntry| {
-                calendar
-                    .id
-                    .expect("Calendars should always have ids")
+                calendar.id.expect("Calendars should always have ids")
             })
             .collect();
 
-        Ok(GoogleCalendar {
-            hub,
-            calendar_ids
-        })
+        Ok(GoogleCalendar { hub, calendar_ids })
     }
 
     fn can_break(&self) -> Result<CanBreak, ()> {
         let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
-        let ten_minutes_ago: chrono::DateTime<chrono::Utc> = now - chrono::Duration::minutes(10);
-        let in_twenty_mins: chrono::DateTime<chrono::Utc> = now + chrono::Duration::minutes(20);
+        let ten_minutes_ago: chrono::DateTime<chrono::Utc> =
+            now - chrono::Duration::minutes(10);
+        let in_twenty_mins: chrono::DateTime<chrono::Utc> =
+            now + chrono::Duration::minutes(20);
         // println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
 
         // for calendar_id in &self.calendar_ids {
@@ -112,7 +134,12 @@ impl GoogleCalendar {
         //     print!("\n\nevents for {}: {:?}", calendar_id, result);
         // }
 
-        if has_events(&self.hub, &self.calendar_ids, ten_minutes_ago, in_twenty_mins) {
+        if has_events(
+            &self.hub,
+            &self.calendar_ids,
+            ten_minutes_ago,
+            in_twenty_mins,
+        ) {
             Ok(CanBreak::No)
         } else {
             Ok(CanBreak::Yes)
@@ -120,11 +147,23 @@ impl GoogleCalendar {
     }
 }
 
-fn has_events(hub: &CalHub, calendar_ids: &[String], start_time: chrono::DateTime<chrono::Utc>, end_time: chrono::DateTime<chrono::Utc>) -> bool {
-    calendar_ids.iter().any(|calendar_id| has_event(hub, calendar_id, start_time, end_time))
+fn has_events(
+    hub: &CalHub,
+    calendar_ids: &[String],
+    start_time: chrono::DateTime<chrono::Utc>,
+    end_time: chrono::DateTime<chrono::Utc>,
+) -> bool {
+    calendar_ids
+        .iter()
+        .any(|calendar_id| has_event(hub, calendar_id, start_time, end_time))
 }
 
-fn has_event(hub: &CalHub, calendar_id: &str, start_time: chrono::DateTime<chrono::Utc>, end_time: chrono::DateTime<chrono::Utc>) -> bool {
+fn has_event(
+    hub: &CalHub,
+    calendar_id: &str,
+    start_time: chrono::DateTime<chrono::Utc>,
+    end_time: chrono::DateTime<chrono::Utc>,
+) -> bool {
     let result: google_calendar3::Result<(_, Events)> = hub
         .events()
         .list(calendar_id)
@@ -142,19 +181,17 @@ fn has_event(hub: &CalHub, calendar_id: &str, start_time: chrono::DateTime<chron
             // TODO: Maybe I should warn about these errors?
             false
         }
-        Ok((_, events)) => {
-            match events.items {
-                None => false,
-                Some(event_items) => {
-                    if event_items.len() >= 1 {
-                        println!("There were some event items! {:?}", event_items);
-                        true
-                    } else {
-                        false
-                    }
+        Ok((_, events)) => match events.items {
+            None => false,
+            Some(event_items) => {
+                if event_items.len() >= 1 {
+                    println!("There were some event items! {:?}", event_items);
+                    true
+                } else {
+                    false
                 }
             }
-        }
+        },
     }
 }
 

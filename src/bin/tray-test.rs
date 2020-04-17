@@ -52,8 +52,7 @@ where
         button: u32,
         activate_time: u32,
         g: glib_sys::gpointer,
-    )
-    where
+    ) where
         G: Fn(*mut gtk_sys::GtkStatusIcon, u32, u32) + 'static,
     {
         let g: &G = &*(g as *const G);
@@ -104,8 +103,10 @@ fn main() {
 
         gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, whowho);
 
-        gtk_sys::gtk_status_icon_set_tooltip_text(status_icon, "hello".to_glib_none().0);
-
+        gtk_sys::gtk_status_icon_set_tooltip_text(
+            status_icon,
+            "hello".to_glib_none().0,
+        );
     }
 
     connect_activate(
@@ -120,7 +121,9 @@ fn main() {
 
     connect_popup_menu(
         status_icon,
-        move |status_icon: *mut gtk_sys::GtkStatusIcon, button, activate_time| {
+        move |status_icon: *mut gtk_sys::GtkStatusIcon,
+              button,
+              activate_time| {
             let menu = gtk::Menu::new();
             let test_item = gtk::MenuItem::new_with_label("test test test");
             test_item.connect_activate(|_| println!("yo from menu item"));
@@ -129,22 +132,28 @@ fn main() {
             menu.show_all();
             menu.popup_easy(button, activate_time);
             println!("after popup_menu!!!");
-        }
+        },
     );
 
     let mut whowhowho: &[u8] = IMG;
     let whowhowho1: &mut &[u8] = &mut whowhowho;
 
-    let image_surface = cairo::ImageSurface::create_from_png(whowhowho1).expect("should create png from mem");
+    let image_surface = cairo::ImageSurface::create_from_png(whowhowho1)
+        .expect("should create png from mem");
 
     let cr = cairo::Context::new(&image_surface);
-    cr.select_font_face("monospace", cairo::FontSlant::Normal, cairo::FontWeight::Bold);
+    cr.select_font_face(
+        "monospace",
+        cairo::FontSlant::Normal,
+        cairo::FontWeight::Bold,
+    );
     cr.set_font_size(800.0);
-    cr.set_source_rgb(1.0,0.0,0.0);
+    cr.set_source_rgb(1.0, 0.0, 0.0);
     cr.move_to(0.0, 750.0);
     cr.show_text("1m");
 
-    let new_pixbuf = gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
+    let new_pixbuf =
+        gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
     let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
 
     unsafe {
