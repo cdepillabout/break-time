@@ -121,19 +121,6 @@ impl GoogleCalendar {
             now + chrono::Duration::minutes(20);
         // println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
 
-        // for calendar_id in &self.calendar_ids {
-        //     let result: google_calendar3::Result<(_, Events)> = self.hub
-        //         .events()
-        //         .list(&calendar_id)
-        //         .add_scope(Scope::Readonly)
-        //         .add_scope(Scope::EventReadonly)
-        //         // all events the occur over the next 20 minutes
-        //         .time_min(&ten_minutes_ago.to_rfc3339())
-        //         .time_max(&in_twenty_mins.to_rfc3339())
-        //         .doit();
-        //     print!("\n\nevents for {}: {:?}", calendar_id, result);
-        // }
-
         if has_events(
             &self.hub,
             &self.calendar_ids,
