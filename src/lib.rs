@@ -12,8 +12,6 @@ use std::sync::mpsc::{Sender};
 use prelude::*;
 use scheduler::Scheduler;
 
-
-
 pub enum Msg {
     StartBreak,
     EndBreak,
@@ -42,6 +40,7 @@ pub fn default_main() {
 
     // scheduler.run();
 
+    println!("Starting the scheduler...");
     let scheduler_sender = Scheduler::run(sender.clone());
 
     tray::show();

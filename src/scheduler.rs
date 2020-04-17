@@ -80,6 +80,7 @@ impl Scheduler {
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
             let sched = Scheduler::new(sender).expect("Could not initialize plugins.");
+            println!("Scheduler initialized plugins");
             loop {
                 sched.wait_until_break();
 
@@ -93,13 +94,16 @@ impl Scheduler {
 
     pub fn wait_until_break(&self) {
         loop {
+            println!("Scheduler sleeping until break time ({:?})", self.time_until_break);
             std::thread::sleep(self.time_until_break);
+            println!("Scheduler finished sleeping, checking if it can break now...");
             let (opt_can_break, errs) = self.plugins.can_break_now();
             if errs.is_empty() {
                 match opt_can_break {
                     None => panic!("If there are no errors, then we should always get a response to can_break"),
                     Some(can_break) => {
                         if can_break.into_bool() {
+                            println!("Scheduler realized it was able to break, so sending a message.");
                             self.sender.send(super::Msg::StartBreak);
                             break;
                         } else {

@@ -2,7 +2,7 @@ use super::{CanBreak, Plugin};
 
 use std::net::TcpListener;
 
-use google_calendar3::{CalendarHub, CalendarListEntry, Channel, Error, Scope};
+use google_calendar3::{CalendarHub, CalendarListEntry, Channel, Error, Events, Scope};
 use yup_oauth2::{
     ApplicationSecret, Authenticator, AuthenticatorDelegate, DefaultAuthenticatorDelegate,
     DiskTokenStorage, Retry,
@@ -12,8 +12,10 @@ fn get_available_port() -> Option<u16> {
     (8080..65535).find(|port| TcpListener::bind(("127.0.0.1", *port)).is_ok())
 }
 
+type CalHub = CalendarHub<hyper::Client, Authenticator<DefaultAuthenticatorDelegate, DiskTokenStorage, hyper::Client>>;
+
 pub struct GoogleCalendar {
-    hub: CalendarHub<hyper::Client, Authenticator<DefaultAuthenticatorDelegate, DiskTokenStorage, hyper::Client>>,
+    hub: CalHub,
     calendar_ids: Vec<String>,
 }
 
@@ -95,22 +97,64 @@ impl GoogleCalendar {
         let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
         let ten_minutes_ago: chrono::DateTime<chrono::Utc> = now - chrono::Duration::minutes(10);
         let in_twenty_mins: chrono::DateTime<chrono::Utc> = now + chrono::Duration::minutes(20);
-        println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
+        // println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
 
-        for calendar_id in self.calendar_ids {
-            let result = self.hub
-                .events()
-                .list(&calendar_id)
-                .add_scope(Scope::Readonly)
-                .add_scope(Scope::EventReadonly)
-                // all events the occur over the next 20 minutes
-                .time_min(&ten_minutes_ago.to_rfc3339())
-                .time_max(&in_twenty_mins.to_rfc3339())
-                .doit();
-            print!("\n\nevents for {}: {:?}", calendar_id, result);
+        // for calendar_id in &self.calendar_ids {
+        //     let result: google_calendar3::Result<(_, Events)> = self.hub
+        //         .events()
+        //         .list(&calendar_id)
+        //         .add_scope(Scope::Readonly)
+        //         .add_scope(Scope::EventReadonly)
+        //         // all events the occur over the next 20 minutes
+        //         .time_min(&ten_minutes_ago.to_rfc3339())
+        //         .time_max(&in_twenty_mins.to_rfc3339())
+        //         .doit();
+        //     print!("\n\nevents for {}: {:?}", calendar_id, result);
+        // }
+
+        if has_events(&self.hub, &self.calendar_ids, ten_minutes_ago, in_twenty_mins) {
+            Ok(CanBreak::No)
+        } else {
+            Ok(CanBreak::Yes)
         }
+    }
+}
 
-        Ok(CanBreak::Yes)
+fn has_events(hub: &CalHub, calendar_ids: &[String], start_time: chrono::DateTime<chrono::Utc>, end_time: chrono::DateTime<chrono::Utc>) -> bool {
+    calendar_ids.iter().any(|calendar_id| has_event(hub, calendar_id, start_time, end_time))
+}
+
+fn has_event(hub: &CalHub, calendar_id: &str, start_time: chrono::DateTime<chrono::Utc>, end_time: chrono::DateTime<chrono::Utc>) -> bool {
+    let result: google_calendar3::Result<(_, Events)> = hub
+        .events()
+        .list(calendar_id)
+        .add_scope(Scope::Readonly)
+        .add_scope(Scope::EventReadonly)
+        // all events the occur over the next 20 minutes
+        .time_min(&start_time.to_rfc3339())
+        .time_max(&end_time.to_rfc3339())
+        .doit();
+
+    // println!("\n\nevents for {}: {:?}", calendar_id, result);
+
+    match result {
+        Err(_err) => {
+            // TODO: Maybe I should warn about these errors?
+            false
+        }
+        Ok((_, events)) => {
+            match events.items {
+                None => false,
+                Some(event_items) => {
+                    if event_items.len() >= 1 {
+                        println!("There were some event items! {:?}", event_items);
+                        true
+                    } else {
+                        false
+                    }
+                }
+            }
+        }
     }
 }
 
