@@ -98,6 +98,34 @@ fn redisplay(state: &State) {
     }
 }
 
+fn setup_windows(state: &State) {
+    let app_wins_with_monitors = state.get_app_wins_with_monitors();
+
+    for (i, (window, monitor)) in app_wins_with_monitors.into_iter().enumerate() {
+        window.show_all();
+
+        let monitor_rect = monitor.get_geometry();
+        let gdk_window: gdk::Window = window.get_window().expect(
+            "Gtk::Window should always be able to be converted to Gdk::Window",
+        );
+        gdk_window.fullscreen_on_monitor(monitor.id);
+        gdk_window.resize(monitor_rect.width, monitor_rect.height);
+
+        // Grab the mouse and keyboard on the first Window.
+        if i == 0 {
+            let default_display = gdk::Display::get_default()
+                .expect("gdk should always find a Display when it runs");
+
+            let default_seat = default_display.get_default_seat().expect("gdk Display should always have a deafult Seat");
+
+            let grab_status = default_seat.grab(&gdk_window, gdk::SeatCapabilities::ALL, false, None, None, None, );
+            println!("grab status: {:?}", grab_status);
+            let grab_status = default_seat.grab(&gdk_window, gdk::SeatCapabilities::KEYBOARD, false, None, None, None, );
+            println!("grab status: {:?}", grab_status);
+        }
+    }
+}
+
 pub fn start_break(app_sender: glib::Sender<Msg>) {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
@@ -110,16 +138,7 @@ pub fn start_break(app_sender: glib::Sender<Msg>) {
 
     redisplay(&state);
 
-    for (window, monitor) in state.get_app_wins_with_monitors() {
-        window.show_all();
-
-        let monitor_rect = monitor.get_geometry();
-        let gdk_window: gdk::Window = window.get_window().expect(
-            "Gtk::Window should always be able to be converted to Gdk::Window",
-        );
-        gdk_window.fullscreen_on_monitor(monitor.id);
-        gdk_window.resize(monitor_rect.width, monitor_rect.height);
-    }
+    setup_windows(&state);
 
     receiver.attach(
         None,

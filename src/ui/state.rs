@@ -22,8 +22,8 @@ impl Monitor {
         Monitor { id, monitor }
     }
 
-    pub fn new_from_id(default_display: gdk::Display, id: i32) -> Self {
-        let mon = default_display.get_monitor(id).expect(&format!(
+    pub fn new_from_id(display: gdk::Display, id: i32) -> Self {
+        let mon = display.get_monitor(id).expect(&format!(
             "Could not get monitor for monitor index {:?}",
             id
         ));
@@ -32,7 +32,7 @@ impl Monitor {
 
     pub fn all() -> Vec<Self> {
         let default_display = gdk::Display::get_default()
-            .expect("gtk should always find a Display when it runs");
+            .expect("gdk should always find a Display when it runs");
         let num_monitors = default_display.get_n_monitors();
         (0..num_monitors)
             .map(|monitor_index| {
