@@ -102,7 +102,8 @@ fn redisplay(state: &State) {
 fn setup_windows(state: &State) {
     let app_wins_with_monitors = state.get_app_wins_with_monitors();
 
-    for (i, (window, monitor)) in app_wins_with_monitors.into_iter().enumerate() {
+    for (i, (window, monitor)) in app_wins_with_monitors.into_iter().enumerate()
+    {
         window.show_all();
 
         let monitor_rect = monitor.get_geometry();
@@ -125,13 +126,26 @@ fn setup_windows(state: &State) {
                 let default_display = gdk::Display::get_default()
                     .expect("gdk should always find a Display when it runs");
 
-                let default_seat = default_display.get_default_seat().expect("gdk Display should always have a deafult Seat");
+                let default_seat = default_display
+                    .get_default_seat()
+                    .expect("gdk Display should always have a deafult Seat");
 
-                let grab_status = default_seat.grab(&gdk_window, gdk::SeatCapabilities::ALL, false, None, None, None, );
+                let grab_status = default_seat.grab(
+                    &gdk_window,
+                    gdk::SeatCapabilities::ALL,
+                    false,
+                    None,
+                    None,
+                    None,
+                );
 
                 match grab_status {
                     gdk::GrabStatus::Success => {
-                        println!("Successfully grabbed screen after {} {}.", idle_check_times, if idle_check_times > 1 { "tries" } else { "try" });
+                        println!(
+                            "Successfully grabbed screen after {} {}.",
+                            idle_check_times,
+                            if idle_check_times > 1 { "tries" } else { "try" }
+                        );
                         Continue(false)
                     }
                     _ => {
