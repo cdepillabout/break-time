@@ -5,6 +5,7 @@ mod css;
 mod state;
 
 use glib::clone;
+use glib::source::Continue;
 use gtk::Inhibit;
 use std::time::{Duration, Instant};
 
@@ -12,18 +13,18 @@ use super::Msg;
 use prelude::*;
 use state::{Message, State};
 
-fn handle_msg_recv(state: &State, msg: Message) -> glib::source::Continue {
+fn handle_msg_recv(state: &State, msg: Message) -> Continue {
     // enable(state);
 
     match msg {
-        Message::Display => glib::source::Continue(true),
+        Message::Display => Continue(true),
         Message::End => {
             for window in state.get_app_wins() {
                 window.hide();
                 window.destroy();
             }
             state.notify_app_end();
-            glib::source::Continue(false)
+            Continue(false)
         }
     }
 }
@@ -76,13 +77,13 @@ fn connect_events(state: &State) {
             match option_time_remaining {
                 None => {
                     end_break(&state);
-                    glib::source::Continue(false)
+                    Continue(false)
                 }
                 Some(time_remaining) => {
                     for label in state.get_time_remaining_labels() {
                         label.set_text(&format!("{:?}", time_remaining));
                     }
-                    glib::source::Continue(true)
+                    Continue(true)
                 }
             }
 
@@ -111,17 +112,23 @@ fn setup_windows(state: &State) {
         gdk_window.fullscreen_on_monitor(monitor.id);
         gdk_window.resize(monitor_rect.width, monitor_rect.height);
 
+        println!("in setup_windows, i = {}", i);
+
         // Grab the mouse and keyboard on the first Window.
         if i == 0 {
-            let default_display = gdk::Display::get_default()
-                .expect("gdk should always find a Display when it runs");
+            // For some reason, grab() fails unless we wait for the window to be fully shown.
+            gtk::idle_add(move || {
+                let default_display = gdk::Display::get_default()
+                    .expect("gdk should always find a Display when it runs");
 
-            let default_seat = default_display.get_default_seat().expect("gdk Display should always have a deafult Seat");
+                let default_seat = default_display.get_default_seat().expect("gdk Display should always have a deafult Seat");
 
-            let grab_status = default_seat.grab(&gdk_window, gdk::SeatCapabilities::ALL, false, None, None, None, );
-            println!("grab status: {:?}", grab_status);
-            let grab_status = default_seat.grab(&gdk_window, gdk::SeatCapabilities::KEYBOARD, false, None, None, None, );
-            println!("grab status: {:?}", grab_status);
+                let grab_status = default_seat.grab(&gdk_window, gdk::SeatCapabilities::ALL, false, None, None, None, );
+
+                println!("in callback for setup_windows(), i: {}, grab_status: {:?}", i, grab_status);
+
+                Continue(false)
+            });
         }
     }
 }
