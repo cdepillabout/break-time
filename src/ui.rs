@@ -112,12 +112,16 @@ fn setup_windows(state: &State) {
         gdk_window.fullscreen_on_monitor(monitor.id);
         gdk_window.resize(monitor_rect.width, monitor_rect.height);
 
-        println!("in setup_windows, i = {}", i);
-
         // Grab the mouse and keyboard on the first Window.
-        if i == 0 {
-            // For some reason, grab() fails unless we wait for the window to be fully shown.
+        if i == 1 {
+            let mut idle_check_times = 0;
+            // For some reason, grab() fails unless we wait for a while until the window is fully
+            // shown.
             gtk::idle_add(move || {
+                idle_check_times += 1;
+                let ten_millis = std::time::Duration::from_millis(200);
+                std::thread::sleep(ten_millis);
+
                 let default_display = gdk::Display::get_default()
                     .expect("gdk should always find a Display when it runs");
 
@@ -127,7 +131,20 @@ fn setup_windows(state: &State) {
 
                 println!("in callback for setup_windows(), i: {}, grab_status: {:?}", i, grab_status);
 
-                Continue(false)
+                match grab_status {
+                    gdk::GrabStatus::Success => {
+                        println!("Successfully grabbed screen after {} time.", idle_check_times);
+                        Continue(false)
+                    }
+                    _ => {
+                        if idle_check_times >= 20 {
+                            println!("Tried grabbing keyboard/mouse {} times, but never succeeded.", idle_check_times);
+                            Continue(false)
+                        } else {
+                            Continue(true)
+                        }
+                    }
+                }
             });
         }
     }
