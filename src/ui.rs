@@ -131,7 +131,7 @@ fn setup_windows(state: &State) {
 
                 match grab_status {
                     gdk::GrabStatus::Success => {
-                        println!("Successfully grabbed screen after {} time.", idle_check_times);
+                        println!("Successfully grabbed screen after {} {}.", idle_check_times, if idle_check_times > 1 { "tries" } else { "try" });
                         Continue(false)
                     }
                     _ => {
