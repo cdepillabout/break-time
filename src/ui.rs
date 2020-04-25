@@ -129,8 +129,6 @@ fn setup_windows(state: &State) {
 
                 let grab_status = default_seat.grab(&gdk_window, gdk::SeatCapabilities::ALL, false, None, None, None, );
 
-                println!("in callback for setup_windows(), i: {}, grab_status: {:?}", i, grab_status);
-
                 match grab_status {
                     gdk::GrabStatus::Success => {
                         println!("Successfully grabbed screen after {} time.", idle_check_times);
