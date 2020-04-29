@@ -15,7 +15,9 @@ use state::{Message, State};
 
 use crate::x11::X11;
 
-fn handle_msg_recv(state: &State, msg: Message /*, x_conn: &xcb::Connection, original_focused_win: &xcb::GetInputFocusReply*/ ) -> Continue {
+const XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER: u32 = 2;
+
+fn handle_msg_recv(state: &State, msg: Message, x11: &X11, root_win: xcb::Window, net_active_win_atom: xcb::Atom, option_old_active_win: Option<xcb::Window> /*, x_conn: &xcb::Connection, original_focused_win: &xcb::GetInputFocusReply*/ ) -> Continue {
     // enable(state);
 
     match msg {
@@ -28,6 +30,29 @@ fn handle_msg_recv(state: &State, msg: Message /*, x_conn: &xcb::Connection, ori
             state.notify_app_end();
 
             // xcb::set_input_focus(x_conn, original_focused_win.revert_to(), original_focused_win.focus(), xcb::CURRENT_TIME);
+
+            if let Some(old_active_win) = option_old_active_win {
+
+                let message_data = xcb::ClientMessageData::from_data32([XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER,
+                                                    xcb::CURRENT_TIME,
+                                                    xcb::WINDOW_NONE,
+                                                    0,
+                                                    0]);
+
+                let message_event = xcb::ClientMessageEvent::new(32, old_active_win, net_active_win_atom, message_data);
+
+                let res = xcb::send_event(&x11.conn,
+                                false,
+                                root_win,
+                                xcb::EVENT_MASK_SUBSTRUCTURE_NOTIFY | xcb::EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+                                &message_event)
+                    .request_check();
+
+                match res {
+                    Ok(()) => (),
+                    Err(err) => println!("Could not focus old focused window: {}", err),
+                }
+            }
 
             Continue(false)
         }
@@ -171,11 +196,11 @@ pub fn start_break(app_sender: glib::Sender<Msg>) {
 
     let x11 = X11::connect();
 
-    let net_active_window_atom = x11.create_atom("_NET_ACTIVE_WINDOW").expect("Could not get the _NET_ACTIVE_WINDOW value from the X server.");
+    let net_active_win_atom = x11.create_atom("_NET_ACTIVE_WINDOW").expect("Could not get the _NET_ACTIVE_WINDOW value from the X server.");
     let root_win = x11.get_root_win().expect("Could not get the root window from the X server.");
-    let active_win = x11.get_win_prop(root_win, net_active_window_atom);
+    let old_active_win = x11.get_win_prop(root_win, net_active_win_atom);
 
-    println!("active_win: {:?}", active_win);
+    println!("previous active_win: {:?}", old_active_win);
 
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
@@ -190,8 +215,10 @@ pub fn start_break(app_sender: glib::Sender<Msg>) {
 
     setup_windows(&state);
 
+
+
     receiver.attach(
         None,
-        clone!(@strong state => move |msg| handle_msg_recv(&state, msg /*, &x_conn, &original_focused_win*/)),
+        clone!(@strong state => move |msg| handle_msg_recv(&state, msg, &x11, root_win, net_active_win_atom, old_active_win /*, &x_conn, &original_focused_win*/)),
     );
 }
