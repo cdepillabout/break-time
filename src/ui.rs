@@ -120,11 +120,11 @@ fn setup_windows(state: &State) {
 
         // Grab the mouse and keyboard on the first Window.
         if i == 1 {
-            let mut idle_check_times = 0;
+            let mut seat_grab_check_times = 0;
             // For some reason, grab() fails unless we wait for a while until the window is fully
             // shown.
             gtk::idle_add(move || {
-                idle_check_times += 1;
+                seat_grab_check_times += 1;
                 let ten_millis = std::time::Duration::from_millis(200);
                 std::thread::sleep(ten_millis);
 
@@ -148,14 +148,14 @@ fn setup_windows(state: &State) {
                     gdk::GrabStatus::Success => {
                         println!(
                             "Successfully grabbed screen after {} {}.",
-                            idle_check_times,
-                            if idle_check_times > 1 { "tries" } else { "try" }
+                            seat_grab_check_times,
+                            if seat_grab_check_times > 1 { "tries" } else { "try" }
                         );
                         Continue(false)
                     }
                     _ => {
-                        if idle_check_times >= 20 {
-                            println!("Tried grabbing keyboard/mouse {} times, but never succeeded.", idle_check_times);
+                        if seat_grab_check_times >= 20 {
+                            println!("Tried grabbing keyboard/mouse {} times, but never succeeded.", seat_grab_check_times);
                             Continue(false)
                         } else {
                             Continue(true)
