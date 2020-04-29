@@ -1,29 +1,22 @@
 use super::{CanBreak, Plugin};
 
+use crate::x11::{X11};
+
 pub struct WindowTitles {
-    conn: xcb::Connection,
-    screen_num: i32,
+    x11: X11,
     net_wm_name_atom: xcb::Atom,
     utf8_string_atom: xcb::Atom,
 }
 
 impl WindowTitles {
     pub fn new() -> Result<Self, ()> {
-        let (conn, screen_num) = xcb::Connection::connect(None).unwrap();
+        let x11 = X11::connect();
 
-        let net_wm_name_atom_cookie =
-            xcb::intern_atom(&conn, false, "_NET_WM_NAME");
-        let utf8_string_atom_cookie =
-            xcb::intern_atom(&conn, false, "UTF8_STRING");
-
-        let net_wm_name_atom =
-            net_wm_name_atom_cookie.get_reply().map_err(|_| ())?.atom();
-        let utf8_string_atom =
-            utf8_string_atom_cookie.get_reply().map_err(|_| ())?.atom();
+        let net_wm_name_atom = x11.create_atom("_NET_WM_NAME").ok_or(())?;
+        let utf8_string_atom = x11.create_atom("UTF8_STRING").ok_or(())?;
 
         Ok(WindowTitles {
-            conn,
-            screen_num,
+            x11,
             net_wm_name_atom,
             utf8_string_atom,
         })
@@ -31,7 +24,7 @@ impl WindowTitles {
 
     fn request_win_props<'a>(&'a self, win: xcb::Window) -> WinPropCookies<'a> {
         let wm_name_cookie = xcb::xproto::get_property(
-            &self.conn,
+            &self.x11.conn,
             false,
             win,
             xcb::xproto::ATOM_WM_NAME,
@@ -41,7 +34,7 @@ impl WindowTitles {
         );
 
         let net_wm_name_cookie = xcb::xproto::get_property(
-            &self.conn,
+            &self.x11.conn,
             false,
             win,
             self.net_wm_name_atom,
@@ -51,7 +44,7 @@ impl WindowTitles {
         );
 
         let wm_class_cookie = xcb::xproto::get_property(
-            &self.conn,
+            &self.x11.conn,
             false,
             win,
             xcb::xproto::ATOM_WM_CLASS,
@@ -61,7 +54,7 @@ impl WindowTitles {
         );
 
         let wm_transient_for_cookie = xcb::xproto::get_property(
-            &self.conn,
+            &self.x11.conn,
             false,
             win,
             xcb::xproto::ATOM_WM_TRANSIENT_FOR,
@@ -102,10 +95,10 @@ impl WindowTitles {
     }
 
     fn get_root_win(&self) -> Result<xcb::Window, ()> {
-        let setup: xcb::Setup = self.conn.get_setup();
+        let setup: xcb::Setup = self.x11.conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
         let screen: xcb::Screen =
-            roots.nth(self.screen_num as usize).ok_or(())?;
+            roots.nth(self.x11.preferred_screen as usize).ok_or(())?;
         Ok(screen.root())
     }
 
@@ -113,7 +106,7 @@ impl WindowTitles {
         let root_win = self.get_root_win()?;
 
         let query_tree_reply: xcb::QueryTreeReply =
-            xcb::xproto::query_tree(&self.conn, root_win)
+            xcb::xproto::query_tree(&self.x11.conn, root_win)
                 .get_reply()
                 .map_err(|_| ())?;
 
