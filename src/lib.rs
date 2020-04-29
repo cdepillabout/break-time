@@ -5,8 +5,8 @@
 mod prelude;
 mod scheduler;
 mod tray;
-mod x11;
 pub mod ui;
+mod x11;
 
 use std::sync::mpsc::Sender;
 

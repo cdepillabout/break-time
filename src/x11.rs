@@ -1,4 +1,3 @@
-
 use byteorder::{LittleEndian, ReadBytesExt};
 
 pub struct X11 {
@@ -8,10 +7,12 @@ pub struct X11 {
 
 impl X11 {
     pub fn connect() -> X11 {
-        let (conn, preferred_screen) = xcb::Connection::connect(None).expect("Could not connect to X server");
+        let (conn, preferred_screen) = xcb::Connection::connect(None)
+            .expect("Could not connect to X server");
 
         X11 {
-            conn, preferred_screen,
+            conn,
+            preferred_screen,
         }
     }
 
@@ -19,19 +20,36 @@ impl X11 {
         let net_wm_name_atom_cookie =
             xcb::intern_atom(&self.conn, false, atom_name);
 
-        net_wm_name_atom_cookie.get_reply().ok().map(|rep| rep.atom())
+        net_wm_name_atom_cookie
+            .get_reply()
+            .ok()
+            .map(|rep| rep.atom())
     }
 
     pub fn get_root_win(&self) -> Option<xcb::Window> {
         let setup: xcb::Setup = self.conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
-        roots.nth(self.preferred_screen as usize).map(|screen| screen.root())
+        roots
+            .nth(self.preferred_screen as usize)
+            .map(|screen| screen.root())
     }
 
-    pub fn get_win_prop(&self, win: xcb::Window, atom: xcb::Atom) -> Option<xcb::Window> {
-        let reply = xcb::get_property(&self.conn, false, win, atom, xcb::ATOM_WINDOW, 0, 1)
-                        .get_reply()
-                        .ok()?;
+    pub fn get_win_prop(
+        &self,
+        win: xcb::Window,
+        atom: xcb::Atom,
+    ) -> Option<xcb::Window> {
+        let reply = xcb::get_property(
+            &self.conn,
+            false,
+            win,
+            atom,
+            xcb::ATOM_WINDOW,
+            0,
+            1,
+        )
+        .get_reply()
+        .ok()?;
 
         // No value available, or the value is more than 1 (which is unexpected).
         if reply.value_len() != 1 {
@@ -54,4 +72,3 @@ impl X11 {
         }
     }
 }
-

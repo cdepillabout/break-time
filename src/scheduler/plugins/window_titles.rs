@@ -1,6 +1,6 @@
 use super::{CanBreak, Plugin};
 
-use crate::x11::{X11};
+use crate::x11::X11;
 
 pub struct WindowTitles {
     x11: X11,
