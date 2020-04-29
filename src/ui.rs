@@ -46,6 +46,7 @@ fn handle_msg_recv(
                 ]);
 
                 let message_event = xcb::ClientMessageEvent::new(
+                    // Data size (8-bit, 16-bit, or 32-bit).  This message is 32-bit.
                     32,
                     old_active_win,
                     net_active_win_atom,
