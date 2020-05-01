@@ -23,6 +23,12 @@ type CalHub = CalendarHub<
     >,
 >;
 
+type Auth = Authenticator<
+            DefaultAuthenticatorDelegate,
+            DiskTokenStorage,
+            hyper::Client,
+        >;
+
 pub struct GoogleCalendar {
     hub: CalHub,
     calendar_ids: Vec<String>,
@@ -59,37 +65,14 @@ impl GoogleCalendar {
                 ..Default::default()
             };
 
-        let http_client_for_auth: hyper::Client = hyper::Client::with_connector(
-            hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
-        );
+        let auth: Auth = create_auth(&secret, disk_token_storage)?;
+
         let http_client_for_cal: hyper::Client = hyper::Client::with_connector(
             hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
         );
 
-        let first_available_port = get_available_port().ok_or(())?;
 
-        let auth: Authenticator<
-            DefaultAuthenticatorDelegate,
-            DiskTokenStorage,
-            hyper::Client,
-        > = Authenticator::new(
-            &secret,
-            DefaultAuthenticatorDelegate,
-            http_client_for_auth,
-            disk_token_storage,
-            Some(yup_oauth2::FlowType::InstalledRedirect(
-                first_available_port.into(),
-            )),
-        );
-
-        let hub: CalendarHub<
-            hyper::Client,
-            Authenticator<
-                DefaultAuthenticatorDelegate,
-                DiskTokenStorage,
-                hyper::Client,
-            >,
-        > = CalendarHub::new(http_client_for_cal, auth);
+        let hub: CalHub = CalendarHub::new(http_client_for_cal, auth);
 
         let calendar_ids = get_all_calendar_ids(&hub);
 
@@ -116,6 +99,28 @@ impl GoogleCalendar {
         }
     }
 }
+
+fn create_auth(secret: &ApplicationSecret, disk_token_storage: DiskTokenStorage) -> Result<Auth, ()> {
+    let http_client_for_auth: hyper::Client = hyper::Client::with_connector(
+        hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
+    );
+    let first_available_port = get_available_port().ok_or(())?;
+
+    let auth: Auth = Authenticator::new(
+        secret,
+        DefaultAuthenticatorDelegate,
+        http_client_for_auth,
+        disk_token_storage,
+        Some(yup_oauth2::FlowType::InstalledRedirect(
+            first_available_port.into(),
+        )),
+    );
+
+    Ok(auth)
+}
+
+// fn create_hub() -> CalHub {
+// }
 
 fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
     let (_, calendar_list_res) = hub
