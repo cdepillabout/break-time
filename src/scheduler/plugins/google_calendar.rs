@@ -91,24 +91,7 @@ impl GoogleCalendar {
             >,
         > = CalendarHub::new(http_client_for_cal, auth);
 
-        let (_, calendar_list_res) = hub
-            .calendar_list()
-            .list()
-            .add_scope(Scope::Readonly)
-            .add_scope(Scope::EventReadonly)
-            .doit()
-            .expect("couldn't get a response from calendar_list");
-
-        let calendars = calendar_list_res
-            .items
-            .expect("There should be some calendars available");
-
-        let calendar_ids: Vec<String> = calendars
-            .into_iter()
-            .map(|calendar: CalendarListEntry| {
-                calendar.id.expect("Calendars should always have ids")
-            })
-            .collect();
+        let calendar_ids = get_all_calendar_ids(&hub);
 
         Ok(GoogleCalendar { hub, calendar_ids })
     }
@@ -132,6 +115,29 @@ impl GoogleCalendar {
             Ok(CanBreak::Yes)
         }
     }
+}
+
+fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
+    let (_, calendar_list_res) = hub
+        .calendar_list()
+        .list()
+        .add_scope(Scope::Readonly)
+        .add_scope(Scope::EventReadonly)
+        .doit()
+        .expect("couldn't get a response from calendar_list");
+
+    let calendars = calendar_list_res
+        .items
+        .expect("There should be some calendars available");
+
+    let calendar_ids: Vec<String> = calendars
+        .into_iter()
+        .map(|calendar: CalendarListEntry| {
+            calendar.id.expect("Calendars should always have ids")
+        })
+        .collect();
+
+    calendar_ids
 }
 
 fn has_events(
