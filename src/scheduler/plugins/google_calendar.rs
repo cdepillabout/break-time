@@ -128,6 +128,8 @@ fn create_hub(disk_token_storage: DiskTokenStorage) -> Result<CalHub, ()> {
     let auth: Auth = create_auth(disk_token_storage)?;
 
     let hub: CalHub = create_hub_from_auth(auth);
+
+    Ok(hub)
 }
 
 fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
