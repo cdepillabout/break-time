@@ -24,17 +24,18 @@ type CalHub = CalendarHub<
 >;
 
 type Auth = Authenticator<
-            DefaultAuthenticatorDelegate,
-            DiskTokenStorage,
-            hyper::Client,
-        >;
+    DefaultAuthenticatorDelegate,
+    DiskTokenStorage,
+    hyper::Client,
+>;
 
 pub struct GoogleCalendar {
     hub: CalHub,
     calendar_ids: Vec<String>,
 }
 
-const GOOGLE_CLIENT_ID: &'static str = "728095687622-mpib9rmdtck7e8ln9egelnns6na0me08.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID: &'static str =
+    "728095687622-mpib9rmdtck7e8ln9egelnns6na0me08.apps.googleusercontent.com";
 
 // It is weird embedding something called a "client_secret" directly in the source
 // code, but it doesn't seem like this needs to be something that is actually kept
@@ -56,14 +57,7 @@ impl GoogleCalendar {
         )
         .expect("Couldn't create a file to hold the google oauth token");
 
-        let auth: Auth = create_auth(disk_token_storage)?;
-
-        let http_client_for_cal: hyper::Client = hyper::Client::with_connector(
-            hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
-        );
-
-
-        let hub: CalHub = CalendarHub::new(http_client_for_cal, auth);
+        let hub: CalHub = create_hub(disk_token_storage)?;
 
         let calendar_ids = get_all_calendar_ids(&hub);
 
@@ -92,18 +86,17 @@ impl GoogleCalendar {
 }
 
 fn create_auth(disk_token_storage: DiskTokenStorage) -> Result<Auth, ()> {
-   let secret: ApplicationSecret =
-       ApplicationSecret {
-           client_id: String::from(GOOGLE_CLIENT_ID),
-           client_secret: String::from(GOOGLE_CLIENT_SECRET),
-           token_uri: "https://oauth2.googleapis.com/token".to_string(),
-           auth_uri: "https://accounts.google.com/o/oauth2/auth".to_string(),
-           redirect_uris: vec![
-               "http://127.0.0.1".to_string(),
-               "urn:ietf:wg:oauth:2.0:oob".to_string(),
-           ],
-           ..Default::default()
-       };
+    let secret: ApplicationSecret = ApplicationSecret {
+        client_id: String::from(GOOGLE_CLIENT_ID),
+        client_secret: String::from(GOOGLE_CLIENT_SECRET),
+        token_uri: "https://oauth2.googleapis.com/token".to_string(),
+        auth_uri: "https://accounts.google.com/o/oauth2/auth".to_string(),
+        redirect_uris: vec![
+            "http://127.0.0.1".to_string(),
+            "urn:ietf:wg:oauth:2.0:oob".to_string(),
+        ],
+        ..Default::default()
+    };
 
     let http_client_for_auth: hyper::Client = hyper::Client::with_connector(
         hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
@@ -123,8 +116,19 @@ fn create_auth(disk_token_storage: DiskTokenStorage) -> Result<Auth, ()> {
     Ok(auth)
 }
 
-// fn create_hub() -> CalHub {
-// }
+fn create_hub_from_auth(auth: Auth) -> CalHub {
+    let http_client_for_cal: hyper::Client = hyper::Client::with_connector(
+        hyper::net::HttpsConnector::new(hyper_rustls::TlsClient::new()),
+    );
+
+    CalendarHub::new(http_client_for_cal, auth)
+}
+
+fn create_hub(disk_token_storage: DiskTokenStorage) -> Result<CalHub, ()> {
+    let auth: Auth = create_auth(disk_token_storage)?;
+
+    let hub: CalHub = create_hub_from_auth(auth);
+}
 
 fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
     let (_, calendar_list_res) = hub
