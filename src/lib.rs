@@ -2,6 +2,7 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![warn(clippy::nursery)]
 
+mod config;
 mod prelude;
 mod scheduler;
 mod tray;
@@ -10,6 +11,7 @@ mod x11;
 
 use std::sync::mpsc::Sender;
 
+use config::Config;
 use prelude::*;
 use scheduler::Scheduler;
 
@@ -36,6 +38,8 @@ fn handle_msg_recv(
 }
 
 pub fn default_main() {
+    let config = Config::load();
+
     gtk::init().expect("Could not initialize GTK");
 
     let (sender, receiver) =
