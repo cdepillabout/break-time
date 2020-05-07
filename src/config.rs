@@ -1,11 +1,20 @@
+use std::default::Default;
 use std::fs::File;
 use std::path::PathBuf;
 
 use indoc::indoc;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[serde(transparent)]
 pub struct PluginSettings(toml::value::Table);
+
+// pub trait Deserialize<'de>: Sized {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>;
+// }
+
 
 impl Default for PluginSettings {
     fn default() -> Self {
@@ -14,18 +23,24 @@ impl Default for PluginSettings {
         let google_cal_accounts_val = toml::Value::try_from(google_cal_accounts).expect("Could not decode google_cal_accounts as toml Value, even though we should be able to.");
         google_cal.insert(String::from("accounts"), google_cal_accounts_val);
 
+        let x11_window_title_checker: toml::value::Table = toml::map::Map::new();
+
         let mut plugin_settings_table: toml::value::Table =
             toml::map::Map::new();
         plugin_settings_table.insert(
             String::from("google_calendar"),
             toml::Value::Table(google_cal),
         );
+        plugin_settings_table.insert(
+            String::from("x11_window_title_checker"),
+            toml::Value::Table(x11_window_title_checker),
+        );
 
         PluginSettings(plugin_settings_table)
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Settings {
     break_duration_seconds: u32,
     #[serde(rename = "plugin")]
@@ -34,11 +49,9 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        let empty_plugin_settings_table: toml::value::Table =
-            toml::map::Map::new();
         Settings {
-            break_duration_seconds: 20,
-            all_plugin_settings: std::default::Default::default(),
+            break_duration_seconds: 600,
+            all_plugin_settings: Default::default(),
         }
     }
 }
@@ -54,13 +67,11 @@ const DEFAULT_SETTINGS: &str = indoc!(
     # The number of seconds in a break.
     break_duration_seconds = 600 # 10 minutes
 
-    [plugin]
+    [plugin.google_calendar]
+    # A list of strings, one for each Google account you want to authenticate with.
+    accounts = []
 
-      [google_calendar]
-      # A list of strings, one for each Google account you want to authenticate with.
-      accounts = []
-
-      [x11_window_title_checker]
+    [plugin.x11_window_title_checker]
     "
 );
 
@@ -117,5 +128,13 @@ mod tests {
         //     +---/nix/store/qy93dp4a3rqyn2mz63fbxjg228hffwyw-hello-2.10 [...]
         //     "
         // );
+    }
+
+    #[test]
+    fn test_default_settings_constant_is_same_as_default_impl() {
+        let settings_from_default_instance: Settings = Default::default();
+        let settings_from_default_const: Settings = toml::from_str(DEFAULT_SETTINGS).unwrap();
+
+        assert_eq!(settings_from_default_instance, settings_from_default_const);
     }
 }
