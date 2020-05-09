@@ -161,7 +161,7 @@ fn setup_windows(state: &State) {
         gdk_window.resize(monitor_rect.width, monitor_rect.height);
 
         // Grab the mouse and keyboard on the first Window.
-        if i == 1 {
+        if i == 0 {
             let mut seat_grab_check_times = 0;
             // For some reason, grab() fails unless we wait for a while until the window is fully
             // shown.
