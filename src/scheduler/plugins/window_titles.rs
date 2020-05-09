@@ -1,5 +1,7 @@
 use super::{CanBreak, Plugin};
 
+use crate::config::Config;
+
 use crate::x11::X11;
 
 pub struct WindowTitles {
@@ -9,7 +11,7 @@ pub struct WindowTitles {
 }
 
 impl WindowTitles {
-    pub fn new() -> Result<Self, ()> {
+    pub fn new(config: &Config) -> Result<Self, ()> {
         let x11 = X11::connect();
 
         let net_wm_name_atom = x11.create_atom("_NET_WM_NAME").ok_or(())?;

@@ -1,5 +1,6 @@
 mod plugins;
 
+use super::config::Config;
 use plugins::{CanBreak, Plugin};
 
 use std::sync::mpsc::{channel, Sender};
@@ -13,9 +14,9 @@ pub enum Msg {
 pub struct Plugins(Vec<Box<dyn Plugin>>);
 
 impl Plugins {
-    fn new() -> Result<Self, ()> {
-        let window_title_plugin = plugins::WindowTitles::new()?;
-        let google_calendar_plugin = plugins::GoogleCalendar::new()?;
+    fn new(config: &Config) -> Result<Self, ()> {
+        let window_title_plugin = plugins::WindowTitles::new(config)?;
+        let google_calendar_plugin = plugins::GoogleCalendar::new(config)?;
         let all_plugins: Vec<Box<dyn Plugin>> = vec![
             Box::new(window_title_plugin),
             Box::new(google_calendar_plugin),
@@ -69,20 +70,20 @@ pub struct Scheduler {
 const DEFAULT_TIME_UNTIL_BREAK: Duration = Duration::from_secs(1 * 10);
 
 impl Scheduler {
-    pub fn new(sender: glib::Sender<super::Msg>) -> Result<Self, ()> {
+    pub fn new(config: &Config, sender: glib::Sender<super::Msg>) -> Result<Self, ()> {
         Ok(Scheduler {
             sender,
-            plugins: Plugins::new()?,
+            plugins: Plugins::new(config)?,
             time_until_break: DEFAULT_TIME_UNTIL_BREAK,
         })
     }
 
-    pub fn run(sender: glib::Sender<super::Msg>) -> Sender<Msg> {
+    pub fn run(config: Config, sender: glib::Sender<super::Msg>) -> Sender<Msg> {
         let (sched_sender, sched_receiver) = channel();
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
             let sched =
-                Scheduler::new(sender).expect("Could not initialize plugins.");
+                Scheduler::new(&config, sender).expect("Could not initialize plugins.");
             println!("Scheduler initialized plugins");
             loop {
                 sched.wait_until_break();

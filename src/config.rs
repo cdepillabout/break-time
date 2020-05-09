@@ -5,15 +5,18 @@ use std::path::PathBuf;
 use indoc::indoc;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(transparent)]
-pub struct PluginSettings(toml::value::Table);
+pub struct PluginSettings(pub toml::value::Table);
 
 impl Default for PluginSettings {
     fn default() -> Self {
         let mut google_cal: toml::value::Table = toml::map::Map::new();
         let google_cal_accounts: Vec<String> = vec![];
-        let google_cal_accounts_val = toml::Value::try_from(google_cal_accounts).expect("Could not decode google_cal_accounts as toml Value, even though we should be able to.");
+        let google_cal_accounts_val = toml::Value::try_from(google_cal_accounts)
+            .expect(
+                "Could not decode google_cal_accounts as toml Value, even though we should be able to."
+            );
         google_cal.insert(String::from("accounts"), google_cal_accounts_val);
 
         let x11_window_title_checker: toml::value::Table =
@@ -34,11 +37,11 @@ impl Default for PluginSettings {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Settings {
-    break_duration_seconds: u32,
+    pub break_duration_seconds: u32,
     #[serde(rename = "plugin")]
-    all_plugin_settings: PluginSettings,
+    pub all_plugin_settings: PluginSettings,
 }
 
 impl Default for Settings {
@@ -50,6 +53,7 @@ impl Default for Settings {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Config {
     pub base_dir: xdg::BaseDirectories,
     pub file_path: PathBuf,

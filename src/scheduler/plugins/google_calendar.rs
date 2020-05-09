@@ -1,6 +1,9 @@
 use super::{CanBreak, Plugin};
 
+use crate::config::{Config, PluginSettings};
+
 use std::net::TcpListener;
+use std::path::Path;
 
 use google_calendar3::{
     CalendarHub, CalendarListEntry, Channel, Error, Events, Scope,
@@ -29,9 +32,56 @@ type Auth = Authenticator<
     hyper::Client,
 >;
 
-pub struct GoogleCalendar {
+pub struct CalFetcher {
+    email: String,
     hub: CalHub,
     calendar_ids: Vec<String>,
+}
+
+impl CalFetcher {
+    pub fn new(break_time_config_base_dir: &xdg::BaseDirectories, email: String) -> Result<Self, ()> {
+
+        let google_cal_dir_name = Path::new("google-calendar");
+        let token_rel_path = google_cal_dir_name.join(&email);
+
+        let token_path = break_time_config_base_dir
+            .place_config_file(token_rel_path)
+            .map_err(|io_err| ())?;
+
+        let token_path_string =
+            token_path.to_string_lossy().into_owned();
+        let disk_token_storage: DiskTokenStorage = DiskTokenStorage::new(
+            &token_path_string,
+        )
+        .expect("Couldn't create a file to hold the google oauth token");
+
+        let hub: CalHub = create_hub(disk_token_storage)?;
+
+        let calendar_ids = get_all_calendar_ids(&hub);
+
+        Ok(CalFetcher { email, hub, calendar_ids })
+    }
+
+    pub fn can_break(&self) -> Result<CanBreak, ()> {
+        let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
+        let ten_minutes_ago: chrono::DateTime<chrono::Utc> =
+            now - chrono::Duration::minutes(10);
+        let in_twenty_mins: chrono::DateTime<chrono::Utc> =
+            now + chrono::Duration::minutes(20);
+
+        let res = has_events(
+            &self.hub,
+            &self.calendar_ids,
+            ten_minutes_ago,
+            in_twenty_mins,
+        );
+
+        match res {
+            Err(err) => Err(()),
+            Ok(HasEvent::Yes) => Ok(CanBreak::No),
+            Ok(HasEvent::No) => Ok(CanBreak::Yes),
+        }
+    }
 }
 
 const GOOGLE_CLIENT_ID: &'static str =
@@ -43,45 +93,77 @@ const GOOGLE_CLIENT_ID: &'static str =
 // https://stackoverflow.com/questions/59416326/safely-distribute-oauth-2-0-client-secret-in-desktop-applications-in-python
 const GOOGLE_CLIENT_SECRET: &'static str = "mI7MmEnboy8jdYEBjK9rZ2M2";
 
+// TODO: Create a datatype to hold all the settings for the GoogleCalendar plugin.
+// Don't try parsing it out manually here.
+fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
+    let google_cal_settings: &toml::Value =
+        match plugin_settings.0.get("google_calendar") {
+            // If the "google_calendar" key doesn't exist, then just skip.
+            None => return Ok(vec![]),
+            Some(val) => val,
+        };
+    let google_cal_settings_table: &toml::value::Table =
+        google_cal_settings.as_table().ok_or(
+            // If the "google_calendar" key exists, but it doesn't contain a table, then throw an
+            // error.
+            ()
+        )?;
+    let all_accounts: &toml::Value =
+        match google_cal_settings_table.get("accounts") {
+            // If the "google_calendar" key exists, but it doesn't have an accounts field, then
+            // just skip.
+            None => return Ok(vec![]),
+            Some(all_accounts) => all_accounts,
+        };
+
+    let all_emails = all_accounts.clone().try_into().map_err(|err| ());
+
+    println!("All emails: {:?}", all_emails);
+
+    all_emails
+}
+
+fn collect_first_err<T, E>(v: Vec<Result<T, E>>) -> Result<Vec<T>, E> {
+    let mut ok_vec = vec![];
+
+    for res in v {
+        match res {
+            Err(err) => return Err(err),
+            Ok(i) => ok_vec.push(i),
+        }
+    }
+
+    Ok(ok_vec)
+}
+
+pub struct GoogleCalendar {
+    fetchers: Vec<CalFetcher>,
+}
+
 impl GoogleCalendar {
-    pub fn new() -> Result<Self, ()> {
-        let xdg_dirs = xdg::BaseDirectories::with_prefix("break-time")
-            .map_err(|xdg_base_dir_err| ())?;
-        let google_oauth_token_path = xdg_dirs
-            .place_config_file("google-oauth-token")
-            .map_err(|io_err| ())?;
-        let google_oauth_token_path_string =
-            google_oauth_token_path.to_string_lossy().into_owned();
-        let disk_token_storage: DiskTokenStorage = DiskTokenStorage::new(
-            &google_oauth_token_path_string,
-        )
-        .expect("Couldn't create a file to hold the google oauth token");
+    pub fn new(config: &Config) -> Result<Self, ()> {
+        let break_time_config_base_dir: &xdg::BaseDirectories = &config.base_dir;
+        let emails = get_emails(&config.settings.all_plugin_settings)?;
 
-        let hub: CalHub = create_hub(disk_token_storage)?;
+        let fetchers_res =
+            emails.into_iter().map(|email| CalFetcher::new(break_time_config_base_dir, email)).collect();
 
-        let calendar_ids = get_all_calendar_ids(&hub);
+        let fetchers = collect_first_err(fetchers_res)?;
 
-        Ok(GoogleCalendar { hub, calendar_ids })
+        Ok(GoogleCalendar { fetchers })
     }
 
     fn can_break(&self) -> Result<CanBreak, ()> {
-        let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
-        let ten_minutes_ago: chrono::DateTime<chrono::Utc> =
-            now - chrono::Duration::minutes(10);
-        let in_twenty_mins: chrono::DateTime<chrono::Utc> =
-            now + chrono::Duration::minutes(20);
         // println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
 
-        if has_events(
-            &self.hub,
-            &self.calendar_ids,
-            ten_minutes_ago,
-            in_twenty_mins,
-        ) {
-            Ok(CanBreak::No)
-        } else {
-            Ok(CanBreak::Yes)
-        }
+        self.fetchers.iter().map(|fetcher| fetcher.can_break()).fold(Ok(CanBreak::Yes), |accum, can_break_res| {
+            match (accum, can_break_res) {
+                (Err(err), _) => Err(err),
+                (_, Err(err)) => Err(err),
+                (Ok(CanBreak::No), _) => Ok(CanBreak::No),
+                (_, can_break) => can_break,
+            }
+        })
     }
 }
 
@@ -160,10 +242,25 @@ fn has_events(
     calendar_ids: &[String],
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: chrono::DateTime<chrono::Utc>,
-) -> bool {
-    calendar_ids
+) -> Result<HasEvent, ()> {
+    let all_has_events: Vec<Result<HasEvent, ()>> = calendar_ids
         .iter()
-        .any(|calendar_id| has_event(hub, calendar_id, start_time, end_time))
+        .map(|calendar_id| has_event(hub, calendar_id, start_time, end_time))
+        .collect();
+
+    all_has_events.into_iter().fold(Ok(HasEvent::No), |accum, res| {
+        match (accum, res) {
+            (Err(err), _) => Err(err),
+            (_, Err(err)) => Err(err),
+            (Ok(HasEvent::No), new) => new,
+            (Ok(HasEvent::Yes), _) => Ok(HasEvent::Yes),
+        }
+    })
+}
+
+enum HasEvent {
+    No,
+    Yes,
 }
 
 fn has_event(
@@ -171,7 +268,7 @@ fn has_event(
     calendar_id: &str,
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: chrono::DateTime<chrono::Utc>,
-) -> bool {
+) -> Result<HasEvent, ()> {
     let result: google_calendar3::Result<(_, Events)> = hub
         .events()
         .list(calendar_id)
@@ -185,18 +282,17 @@ fn has_event(
     // println!("\n\nevents for {}: {:?}", calendar_id, result);
 
     match result {
-        Err(_err) => {
-            // TODO: Maybe I should warn about these errors?
-            false
+        Err(err) => {
+            Err(())
         }
         Ok((_, events)) => match events.items {
-            None => false,
+            None => Ok(HasEvent::No),
             Some(event_items) => {
                 if event_items.len() >= 1 {
                     println!("There were some event items! {:?}", event_items);
-                    true
+                    Ok(HasEvent::Yes)
                 } else {
-                    false
+                    Ok(HasEvent::No)
                 }
             }
         },

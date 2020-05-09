@@ -38,7 +38,7 @@ fn handle_msg_recv(
 }
 
 pub fn default_main() {
-    let config = Config::load();
+    let config = Config::load().expect("Could not load config file.");
 
     gtk::init().expect("Could not initialize GTK");
 
@@ -50,7 +50,7 @@ pub fn default_main() {
     // scheduler.run();
 
     println!("Starting the scheduler...");
-    let scheduler_sender = Scheduler::run(sender.clone());
+    let scheduler_sender = Scheduler::run(config, sender.clone());
 
     tray::show();
 
