@@ -9,13 +9,6 @@ use serde::{Deserialize, Serialize};
 #[serde(transparent)]
 pub struct PluginSettings(toml::value::Table);
 
-// pub trait Deserialize<'de>: Sized {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: Deserializer<'de>;
-// }
-
-
 impl Default for PluginSettings {
     fn default() -> Self {
         let mut google_cal: toml::value::Table = toml::map::Map::new();
@@ -75,34 +68,48 @@ const DEFAULT_SETTINGS: &str = indoc!(
     "
 );
 
-//     "/nix/store/qy93dp4a3rqyn2mz63fbxjg228hffwyw-hello-2.10
-//     +---/nix/store/pnd2kl27sag76h23wa5kl95a76n3k9i3-glibc-2.27
-//     +---/nix/store/pnd2kl27sag76h23wa5kl95a76n3k9i3-glibc-2.27 [...]
-//     +---/nix/store/qy93dp4a3rqyn2mz63fbxjg228hffwyw-hello-2.10 [...]
-//     "
-// );
 
 impl Config {
+    // TODO: Change some of the panics in this function to returning errors.
     pub fn load() -> Result<Self, ()> {
         let base_dir = xdg::BaseDirectories::with_prefix("break-time")
             .map_err(|xdg_base_dir_err| ())?;
 
-        let file_path = base_dir
+        let config_file_path = base_dir
             .place_config_file("config.toml")
             .map_err(|io_err| ())?;
 
-        // Try opening the config file to see whether it exists or not.
-        let res = File::open(file_path);
-        match res {
-            Err(_) => todo!(),
-            Ok(existing_config_file) => {}
-        }
+        // Try reading the config file to see whether it exists or not.
+        let res_config_file = std::fs::read_to_string(&config_file_path);
+        let settings = match res_config_file {
+            // TODO: I should probably check here the reason we are getting an
+            // error.  If there is a bad permission on the file, then I
+            // should probably just error out fast instead of trying to
+            // create a new config file.
+            Err(_) => {
+                // If we couldn't read the config file, then create a new one
+                // from the default.
+                let write_res = std::fs::write(&config_file_path, DEFAULT_SETTINGS);
+                match write_res {
+                    Ok(()) => (),
+                    Err(err) => panic!("Couldn't write a new config file at {:?} because of the following error: {}", config_file_path, err),
+                }
+                Settings::default()
+            }
+            Ok(config_file) => {
+                let res_settings = toml::from_str(&config_file);
+                match res_settings {
+                    Err(err) => {
+                        panic!("Can't parse config file at {:?} because of the following error: {}", config_file_path, err)
+                    }
+                    Ok(settings) => settings,
+                }
+            }
+        };
 
-        // let config = Config { base_dir, file_path };
+        let config = Config { base_dir, file_path: config_file_path, settings };
 
-        // Ok(config)
-
-        todo!()
+        Ok(config)
     }
 }
 
