@@ -318,10 +318,12 @@ fn has_event(
     // println!("\n\nevents for {}: {:?}", calendar_id, result);
 
     match result {
-        Err(err) => Err(GoogleCalErr::FetchingEvents {
-            calendar_id: String::from(calendar_id),
-            google_cal_err: err,
-        }),
+        Err(err) => {
+            // TODO: It is not possible to fetch from some calendars for some reason.  We just
+            // swallow these errors here.
+            println!("Error fetching events from {}: {}Ignoring error...", calendar_id, err);
+            Ok(HasEvent::No)
+        }
         Ok((_, events)) => match events.items {
             None => Ok(HasEvent::No),
             Some(event_items) => {
