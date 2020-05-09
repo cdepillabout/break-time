@@ -16,7 +16,8 @@ impl Default for PluginSettings {
         let google_cal_accounts_val = toml::Value::try_from(google_cal_accounts).expect("Could not decode google_cal_accounts as toml Value, even though we should be able to.");
         google_cal.insert(String::from("accounts"), google_cal_accounts_val);
 
-        let x11_window_title_checker: toml::value::Table = toml::map::Map::new();
+        let x11_window_title_checker: toml::value::Table =
+            toml::map::Map::new();
 
         let mut plugin_settings_table: toml::value::Table =
             toml::map::Map::new();
@@ -50,9 +51,9 @@ impl Default for Settings {
 }
 
 pub struct Config {
-    base_dir: xdg::BaseDirectories,
-    file_path: PathBuf,
-    settings: Settings,
+    pub base_dir: xdg::BaseDirectories,
+    pub file_path: PathBuf,
+    pub settings: Settings,
 }
 
 const DEFAULT_SETTINGS: &str = indoc!(
@@ -67,7 +68,6 @@ const DEFAULT_SETTINGS: &str = indoc!(
     [plugin.x11_window_title_checker]
     "
 );
-
 
 impl Config {
     // TODO: Change some of the panics in this function to returning errors.
@@ -89,10 +89,16 @@ impl Config {
             Err(_) => {
                 // If we couldn't read the config file, then create a new one
                 // from the default.
-                let write_res = std::fs::write(&config_file_path, DEFAULT_SETTINGS);
+                let write_res =
+                    std::fs::write(&config_file_path, DEFAULT_SETTINGS);
                 match write_res {
                     Ok(()) => (),
-                    Err(err) => panic!("Couldn't write a new config file at {:?} because of the following error: {}", config_file_path, err),
+                    Err(err) =>
+                        panic!(
+                            "Couldn't write a new config file at {:?} because of the following error: {}",
+                            config_file_path,
+                            err
+                        ),
                 }
                 Settings::default()
             }
@@ -100,14 +106,22 @@ impl Config {
                 let res_settings = toml::from_str(&config_file);
                 match res_settings {
                     Err(err) => {
-                        panic!("Can't parse config file at {:?} because of the following error: {}", config_file_path, err)
+                        panic!(
+                            "Can't parse config file at {:?} because of the following error: {}",
+                            config_file_path,
+                            err
+                        )
                     }
                     Ok(settings) => settings,
                 }
             }
         };
 
-        let config = Config { base_dir, file_path: config_file_path, settings };
+        let config = Config {
+            base_dir,
+            file_path: config_file_path,
+            settings,
+        };
 
         Ok(config)
     }
@@ -118,29 +132,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_empty_plugins() {
-        // let plugin_settings_table: toml::value::Table = toml::map::Map::new();
-        // let example_settings =
-        //     Settings {
-        //         all_plugin_settings: plugin_settings_table,
-        //     };
-        // let serialized = toml::to_string(&example_settings);
-
-        // assert_eq!(serialized, Ok(String::from("hello")));
-
-        // let raw_input = indoc!(
-        //     "/nix/store/qy93dp4a3rqyn2mz63fbxjg228hffwyw-hello-2.10
-        //     +---/nix/store/pnd2kl27sag76h23wa5kl95a76n3k9i3-glibc-2.27
-        //     +---/nix/store/pnd2kl27sag76h23wa5kl95a76n3k9i3-glibc-2.27 [...]
-        //     +---/nix/store/qy93dp4a3rqyn2mz63fbxjg228hffwyw-hello-2.10 [...]
-        //     "
-        // );
-    }
-
-    #[test]
     fn test_default_settings_constant_is_same_as_default_impl() {
         let settings_from_default_instance: Settings = Default::default();
-        let settings_from_default_const: Settings = toml::from_str(DEFAULT_SETTINGS).unwrap();
+        let settings_from_default_const: Settings =
+            toml::from_str(DEFAULT_SETTINGS).unwrap();
 
         assert_eq!(settings_from_default_instance, settings_from_default_const);
     }
