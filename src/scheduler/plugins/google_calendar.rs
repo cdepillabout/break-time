@@ -263,8 +263,25 @@ enum HasEvent {
     Yes,
 }
 
+
+
+#[derive(Debug)]
 enum GoogleCalErr {
-    FetchingEvents(String, google_calendar3::Error),
+    FetchingEvents {
+        calendar_id: String,
+        google_cal_err: google_calendar3::Error,
+    },
+}
+
+impl std::error::Error for GoogleCalErr {}
+
+impl std::fmt::Display for GoogleCalErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GoogleCalErr::FetchingEvents { calendar_id, google_cal_err } =>
+                write!(f, "Google Calendard Plugin: Error fetching calendar_id {}: {}", calendar_id, google_cal_err),
+        }
+    }
 }
 
 fn has_event(
@@ -287,7 +304,9 @@ fn has_event(
 
     match result {
         Err(err) => {
-            Err(GoogleCalErr::FetchingEvents(String::from(calendar_id), err))
+            Err(GoogleCalErr::FetchingEvents {
+                calendar_id: String::from(calendar_id),
+                google_cal_err: err})
         }
         Ok((_, events)) => match events.items {
             None => Ok(HasEvent::No),
@@ -305,6 +324,6 @@ fn has_event(
 
 impl Plugin for GoogleCalendar {
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
-        self.can_break()
+        self.can_break().map_err(|google_cal_err| Box::new(google_cal_err) as Box<dyn std::error::Error>)
     }
 }

@@ -271,7 +271,8 @@ impl<T: Clone> ClassInfo<T> {
 }
 
 impl Plugin for WindowTitles {
-    fn can_break_now(&self) -> Result<CanBreak, ()> {
-        self.can_break()
+    fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
+        let custom_error = std::io::Error::new(std::io::ErrorKind::Other, "TODO: change this to an actual error");
+        self.can_break().map_err(|()| Box::new(custom_error) as Box<dyn std::error::Error>)
     }
 }

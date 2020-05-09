@@ -123,7 +123,11 @@ impl Scheduler {
                     }
                 }
             } else {
-                println!("There have been some errors from our plugins, sleeping again just to be safe...");
+                println!("There have been some errors from our plugins:");
+                for e in errs {
+                    println!("{}", e);
+                }
+                println!("Sleeping again just to be safe...");
             }
         }
     }
