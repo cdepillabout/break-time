@@ -39,8 +39,10 @@ pub struct CalFetcher {
 }
 
 impl CalFetcher {
-    pub fn new(break_time_config_base_dir: &xdg::BaseDirectories, email: String) -> Result<Self, ()> {
-
+    pub fn new(
+        break_time_config_base_dir: &xdg::BaseDirectories,
+        email: String,
+    ) -> Result<Self, ()> {
         let google_cal_dir_name = Path::new("google-calendar");
         let token_rel_path = google_cal_dir_name.join(&email);
 
@@ -48,8 +50,7 @@ impl CalFetcher {
             .place_config_file(token_rel_path)
             .map_err(|io_err| ())?;
 
-        let token_path_string =
-            token_path.to_string_lossy().into_owned();
+        let token_path_string = token_path.to_string_lossy().into_owned();
         let disk_token_storage: DiskTokenStorage = DiskTokenStorage::new(
             &token_path_string,
         )
@@ -59,7 +60,11 @@ impl CalFetcher {
 
         let calendar_ids = get_all_calendar_ids(&hub);
 
-        Ok(CalFetcher { email, hub, calendar_ids })
+        Ok(CalFetcher {
+            email,
+            hub,
+            calendar_ids,
+        })
     }
 
     pub fn can_break(&self) -> Result<CanBreak, GoogleCalErr> {
@@ -106,7 +111,7 @@ fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
         google_cal_settings.as_table().ok_or(
             // If the "google_calendar" key exists, but it doesn't contain a table, then throw an
             // error.
-            ()
+            (),
         )?;
     let all_accounts: &toml::Value =
         match google_cal_settings_table.get("accounts") {
@@ -142,11 +147,14 @@ pub struct GoogleCalendar {
 
 impl GoogleCalendar {
     pub fn new(config: &Config) -> Result<Self, ()> {
-        let break_time_config_base_dir: &xdg::BaseDirectories = &config.base_dir;
+        let break_time_config_base_dir: &xdg::BaseDirectories =
+            &config.base_dir;
         let emails = get_emails(&config.settings.all_plugin_settings)?;
 
-        let fetchers_res =
-            emails.into_iter().map(|email| CalFetcher::new(break_time_config_base_dir, email)).collect();
+        let fetchers_res = emails
+            .into_iter()
+            .map(|email| CalFetcher::new(break_time_config_base_dir, email))
+            .collect();
 
         let fetchers = collect_first_err(fetchers_res)?;
 
@@ -156,14 +164,17 @@ impl GoogleCalendar {
     fn can_break(&self) -> Result<CanBreak, GoogleCalErr> {
         // println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
 
-        self.fetchers.iter().map(|fetcher| fetcher.can_break()).fold(Ok(CanBreak::Yes), |accum, can_break_res| {
-            match (accum, can_break_res) {
-                (Err(err), _) => Err(err),
-                (_, Err(err)) => Err(err),
-                (Ok(CanBreak::No), _) => Ok(CanBreak::No),
-                (_, can_break) => can_break,
-            }
-        })
+        self.fetchers
+            .iter()
+            .map(|fetcher| fetcher.can_break())
+            .fold(Ok(CanBreak::Yes), |accum, can_break_res| {
+                match (accum, can_break_res) {
+                    (Err(err), _) => Err(err),
+                    (_, Err(err)) => Err(err),
+                    (Ok(CanBreak::No), _) => Ok(CanBreak::No),
+                    (_, can_break) => can_break,
+                }
+            })
     }
 }
 
@@ -248,22 +259,20 @@ fn has_events(
         .map(|calendar_id| has_event(hub, calendar_id, start_time, end_time))
         .collect();
 
-    all_has_events.into_iter().fold(Ok(HasEvent::No), |accum, res| {
-        match (accum, res) {
+    all_has_events
+        .into_iter()
+        .fold(Ok(HasEvent::No), |accum, res| match (accum, res) {
             (Err(err), _) => Err(err),
             (_, Err(err)) => Err(err),
             (Ok(HasEvent::No), new) => new,
             (Ok(HasEvent::Yes), _) => Ok(HasEvent::Yes),
-        }
-    })
+        })
 }
 
 enum HasEvent {
     No,
     Yes,
 }
-
-
 
 #[derive(Debug)]
 enum GoogleCalErr {
@@ -278,8 +287,14 @@ impl std::error::Error for GoogleCalErr {}
 impl std::fmt::Display for GoogleCalErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GoogleCalErr::FetchingEvents { calendar_id, google_cal_err } =>
-                write!(f, "Google Calendard Plugin: Error fetching calendar_id {}: {}", calendar_id, google_cal_err),
+            GoogleCalErr::FetchingEvents {
+                calendar_id,
+                google_cal_err,
+            } => write!(
+                f,
+                "Google Calendard Plugin: Error fetching calendar_id {}: {}",
+                calendar_id, google_cal_err
+            ),
         }
     }
 }
@@ -303,11 +318,10 @@ fn has_event(
     // println!("\n\nevents for {}: {:?}", calendar_id, result);
 
     match result {
-        Err(err) => {
-            Err(GoogleCalErr::FetchingEvents {
-                calendar_id: String::from(calendar_id),
-                google_cal_err: err})
-        }
+        Err(err) => Err(GoogleCalErr::FetchingEvents {
+            calendar_id: String::from(calendar_id),
+            google_cal_err: err,
+        }),
         Ok((_, events)) => match events.items {
             None => Ok(HasEvent::No),
             Some(event_items) => {
@@ -324,6 +338,8 @@ fn has_event(
 
 impl Plugin for GoogleCalendar {
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
-        self.can_break().map_err(|google_cal_err| Box::new(google_cal_err) as Box<dyn std::error::Error>)
+        self.can_break().map_err(|google_cal_err| {
+            Box::new(google_cal_err) as Box<dyn std::error::Error>
+        })
     }
 }
