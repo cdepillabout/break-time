@@ -35,5 +35,5 @@ impl CanBreak {
 }
 
 pub trait Plugin {
-    fn can_break_now(&self) -> Result<CanBreak, ()>;
+    fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>>;
 }

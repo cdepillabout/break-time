@@ -24,11 +24,11 @@ impl Plugins {
         Ok(Plugins(all_plugins))
     }
 
-    fn can_break_now(&self) -> (Option<CanBreak>, Vec<()>) {
+    fn can_break_now(&self) -> (Option<CanBreak>, Vec<Box<dyn std::error::Error>>) {
         fn f(
-            (opt_old_can_break, mut err_accum): (Option<CanBreak>, Vec<()>),
+            (opt_old_can_break, mut err_accum): (Option<CanBreak>, Vec<Box<dyn std::error::Error>>),
             plugin: &Box<dyn Plugin>,
-        ) -> (Option<CanBreak>, Vec<()>) {
+        ) -> (Option<CanBreak>, Vec<Box<dyn std::error::Error>>) {
             let res_can_break = plugin.can_break_now();
             match res_can_break {
                 Err(err) => {

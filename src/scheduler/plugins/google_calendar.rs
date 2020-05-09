@@ -62,7 +62,7 @@ impl CalFetcher {
         Ok(CalFetcher { email, hub, calendar_ids })
     }
 
-    pub fn can_break(&self) -> Result<CanBreak, ()> {
+    pub fn can_break(&self) -> Result<CanBreak, GoogleCalErr> {
         let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
         let ten_minutes_ago: chrono::DateTime<chrono::Utc> =
             now - chrono::Duration::minutes(10);
@@ -77,7 +77,7 @@ impl CalFetcher {
         );
 
         match res {
-            Err(err) => Err(()),
+            Err(err) => Err(err),
             Ok(HasEvent::Yes) => Ok(CanBreak::No),
             Ok(HasEvent::No) => Ok(CanBreak::Yes),
         }
@@ -153,7 +153,7 @@ impl GoogleCalendar {
         Ok(GoogleCalendar { fetchers })
     }
 
-    fn can_break(&self) -> Result<CanBreak, ()> {
+    fn can_break(&self) -> Result<CanBreak, GoogleCalErr> {
         // println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
 
         self.fetchers.iter().map(|fetcher| fetcher.can_break()).fold(Ok(CanBreak::Yes), |accum, can_break_res| {
@@ -242,8 +242,8 @@ fn has_events(
     calendar_ids: &[String],
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: chrono::DateTime<chrono::Utc>,
-) -> Result<HasEvent, ()> {
-    let all_has_events: Vec<Result<HasEvent, ()>> = calendar_ids
+) -> Result<HasEvent, GoogleCalErr> {
+    let all_has_events: Vec<Result<HasEvent, GoogleCalErr>> = calendar_ids
         .iter()
         .map(|calendar_id| has_event(hub, calendar_id, start_time, end_time))
         .collect();
@@ -263,12 +263,16 @@ enum HasEvent {
     Yes,
 }
 
+enum GoogleCalErr {
+    FetchingEvents(String, google_calendar3::Error),
+}
+
 fn has_event(
     hub: &CalHub,
     calendar_id: &str,
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: chrono::DateTime<chrono::Utc>,
-) -> Result<HasEvent, ()> {
+) -> Result<HasEvent, GoogleCalErr> {
     let result: google_calendar3::Result<(_, Events)> = hub
         .events()
         .list(calendar_id)
@@ -283,7 +287,7 @@ fn has_event(
 
     match result {
         Err(err) => {
-            Err(())
+            Err(GoogleCalErr::FetchingEvents(String::from(calendar_id), err))
         }
         Ok((_, events)) => match events.items {
             None => Ok(HasEvent::No),
@@ -300,7 +304,7 @@ fn has_event(
 }
 
 impl Plugin for GoogleCalendar {
-    fn can_break_now(&self) -> Result<CanBreak, ()> {
+    fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
         self.can_break()
     }
 }
