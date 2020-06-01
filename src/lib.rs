@@ -16,8 +16,9 @@ use prelude::*;
 use scheduler::Scheduler;
 
 pub enum Msg {
-    StartBreak,
     EndBreak,
+    Quit,
+    StartBreak,
 }
 
 fn handle_msg_recv(
@@ -26,13 +27,16 @@ fn handle_msg_recv(
     msg: Msg,
 ) {
     match msg {
-        Msg::StartBreak => {
-            println!("starting break");
-            ui::start_break(sender);
-        }
         Msg::EndBreak => {
             println!("break ended");
             scheduler_sender.send(scheduler::Msg::Start);
+        }
+        Msg::Quit => {
+            gtk::main_quit();
+        }
+        Msg::StartBreak => {
+            println!("starting break");
+            ui::start_break(sender);
         }
     }
 }
@@ -52,7 +56,7 @@ pub fn default_main() {
     println!("Starting the scheduler...");
     let scheduler_sender = Scheduler::run(config, sender.clone());
 
-    tray::show();
+    tray::run(sender.clone());
 
     receiver.attach(None, move |msg| {
         handle_msg_recv(sender.clone(), scheduler_sender.clone(), msg);

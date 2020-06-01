@@ -3,6 +3,7 @@
 pub use glib::translate::*;
 
 use crate::prelude::*;
+use crate::Msg;
 
 static IMG: &'static [u8] = include_bytes!("../imgs/clock.png");
 // static IMG2: &'static [u8] = include_bytes!("../imgs/clock-2.png");
@@ -77,7 +78,8 @@ where
     }
 }
 
-pub fn show() -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
+pub fn run(sender: glib::Sender<Msg>) -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
+
     let pixbuf_loader = gdk_pixbuf::PixbufLoader::new();
     pixbuf_loader
         .write(IMG)
@@ -122,13 +124,12 @@ pub fn show() -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
               button,
               activate_time| {
             let menu = gtk::Menu::new();
-            let test_item = gtk::MenuItem::new_with_label("test test test");
-            test_item.connect_activate(|_| println!("yo from menu item"));
-            menu.append(&test_item);
-            println!("before popup_menu!!!");
+            let quit_item = gtk::MenuItem::new_with_label("Quit");
+            let sender_clone = sender.clone();
+            quit_item.connect_activate(move |_| sender_clone.send(Msg::Quit).expect("Could not send Msg::Quit"));
+            menu.append(&quit_item);
             menu.show_all();
             menu.popup_easy(button, activate_time);
-            println!("after popup_menu!!!");
         },
     );
 

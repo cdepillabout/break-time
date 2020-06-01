@@ -150,7 +150,7 @@ fn main() {
     cr.set_font_size(800.0);
     cr.set_source_rgb(1.0, 0.0, 0.0);
     cr.move_to(0.0, 750.0);
-    cr.show_text("1m");
+    cr.show_text("5m");
 
     let new_pixbuf =
         gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
