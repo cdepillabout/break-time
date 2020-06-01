@@ -78,60 +78,85 @@ where
     }
 }
 
-pub fn run(sender: glib::Sender<Msg>) -> (*mut gtk_sys::GtkStatusIcon, gdk_pixbuf::Pixbuf) {
 
-    let pixbuf_loader = gdk_pixbuf::PixbufLoader::new();
-    pixbuf_loader
-        .write(IMG)
-        .expect("could not write image to pixbufloader");
-    let pixbuf = pixbuf_loader
-        .get_pixbuf()
-        .expect("could not get a pixbuf from the loaded image");
-    pixbuf_loader
-        .close()
-        .expect("could not close pixbuf loader");
+pub struct Tray {
+    status_icon: *mut gtk_sys::GtkStatusIcon,
+    pixbuf: gdk_pixbuf::Pixbuf,
+    sender: glib::Sender<Msg>,
+}
 
-    let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = pixbuf.to_glib_none().0;
+impl Tray {
+    pub fn new(sender: glib::Sender<Msg>) -> Self {
 
-    let status_icon: *mut gtk_sys::GtkStatusIcon;
+        let pixbuf_loader = gdk_pixbuf::PixbufLoader::new();
+        pixbuf_loader
+            .write(IMG)
+            .expect("could not write image to pixbufloader");
+        let pixbuf = pixbuf_loader
+            .get_pixbuf()
+            .expect("could not get a pixbuf from the loaded image");
+        pixbuf_loader
+            .close()
+            .expect("could not close pixbuf loader");
 
-    unsafe {
-        status_icon = gtk_sys::gtk_status_icon_new();
+        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = pixbuf.to_glib_none().0;
+        let status_icon: *mut gtk_sys::GtkStatusIcon;
 
-        gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, pixbuf_sys);
+        unsafe {
+            status_icon = gtk_sys::gtk_status_icon_new();
 
-        gtk_sys::gtk_status_icon_set_tooltip_text(
+            gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, pixbuf_sys);
+
+            gtk_sys::gtk_status_icon_set_visible(status_icon, 1);
+        }
+
+        Tray {
             status_icon,
-            "hello".to_glib_none().0,
-        );
-
-        gtk_sys::gtk_status_icon_set_visible(status_icon, 1);
+            pixbuf,
+            sender,
+        }
     }
 
-    connect_activate(
-        status_icon,
-        move |_status_icon: *mut gtk_sys::GtkStatusIcon| {
-            // unsafe {
-            //     gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, whatwhat);
-            // }
-            println!("clicked!!!");
-        },
-    );
+    pub fn set_tooltip_text(&self, tooltip_text: &str) {
+        unsafe {
+            gtk_sys::gtk_status_icon_set_tooltip_text(
+                self.status_icon,
+                tooltip_text.to_glib_none().0,
+            );
+        }
+    }
 
-    connect_popup_menu(
-        status_icon,
-        move |_status_icon: *mut gtk_sys::GtkStatusIcon,
-              button,
-              activate_time| {
-            let menu = gtk::Menu::new();
-            let quit_item = gtk::MenuItem::new_with_label("Quit");
-            let sender_clone = sender.clone();
-            quit_item.connect_activate(move |_| sender_clone.send(Msg::Quit).expect("Could not send Msg::Quit"));
-            menu.append(&quit_item);
-            menu.show_all();
-            menu.popup_easy(button, activate_time);
-        },
-    );
+    pub fn run(sender: glib::Sender<Msg>) -> Self {
+        let tray = Self::new(sender);
+        tray.set_tooltip_text("break-time");
 
-    (status_icon, pixbuf)
+        connect_activate(
+            tray.status_icon,
+            move |_status_icon: *mut gtk_sys::GtkStatusIcon| {
+                // unsafe {
+                //     gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, whatwhat);
+                // }
+                println!("clicked!!!");
+            },
+        );
+
+        let sender = tray.sender.clone();
+
+        connect_popup_menu(
+            tray.status_icon,
+            move |_status_icon: *mut gtk_sys::GtkStatusIcon,
+                button,
+                activate_time| {
+                let menu = gtk::Menu::new();
+                let quit_item = gtk::MenuItem::new_with_label("Quit");
+                let sender_clone = sender.clone();
+                quit_item.connect_activate(move |_| sender_clone.send(Msg::Quit).expect("Could not send Msg::Quit"));
+                menu.append(&quit_item);
+                menu.show_all();
+                menu.popup_easy(button, activate_time);
+            },
+        );
+
+        tray
+    }
 }

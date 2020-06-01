@@ -49,14 +49,13 @@ pub fn default_main() {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    // let scheduler = Scheduler::new(sender.clone()).expect("Couldn't create a scheduler!");
-
-    // scheduler.run();
+    // TODO: pass the tray to the scheduler so the scheduler can determine when to start counting
+    // down on the tray...
+    let tray = tray::Tray::run(sender.clone());
 
     println!("Starting the scheduler...");
     let scheduler_sender = Scheduler::run(config, sender.clone());
 
-    tray::run(sender.clone());
 
     receiver.attach(None, move |msg| {
         handle_msg_recv(sender.clone(), scheduler_sender.clone(), msg);
