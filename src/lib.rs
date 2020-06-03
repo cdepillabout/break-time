@@ -14,16 +14,19 @@ use std::sync::mpsc::Sender;
 use config::Config;
 use prelude::*;
 use scheduler::Scheduler;
+use tray::Tray;
 
 pub enum Msg {
     EndBreak,
     Quit,
+    TimeRemainingBeforeBreak,
     StartBreak,
 }
 
 fn handle_msg_recv(
     sender: glib::Sender<Msg>,
     scheduler_sender: Sender<scheduler::Msg>,
+    tray: &Tray,
     msg: Msg,
 ) {
     match msg {
@@ -37,6 +40,9 @@ fn handle_msg_recv(
         Msg::StartBreak => {
             println!("starting break");
             ui::start_break(sender);
+        }
+        Msg::TimeRemainingBeforeBreak => {
+            tray.render_time_remaining_before_break();
         }
     }
 }
@@ -56,9 +62,8 @@ pub fn default_main() {
     println!("Starting the scheduler...");
     let scheduler_sender = Scheduler::run(config, sender.clone());
 
-
     receiver.attach(None, move |msg| {
-        handle_msg_recv(sender.clone(), scheduler_sender.clone(), msg);
+        handle_msg_recv(sender.clone(), scheduler_sender.clone(), &tray, msg);
         glib::source::Continue(true)
     });
 

@@ -1,7 +1,8 @@
 mod plugins;
 
-use super::config::Config;
 use plugins::{CanBreak, Plugin};
+use super::config::Config;
+use super::tray::Tray;
 
 use std::sync::mpsc::{channel, Sender};
 use std::time::Duration;

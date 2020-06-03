@@ -126,6 +126,34 @@ impl Tray {
         }
     }
 
+    pub fn render_time_remaining_before_break(&self) {
+        println!("Called render time remaining before break...");
+        // let mut whowhowho: &[u8] = IMG;
+        // let whowhowho1: &mut &[u8] = &mut whowhowho;
+
+        // let image_surface = cairo::ImageSurface::create_from_png(whowhowho1)
+        //     .expect("should create png from mem");
+
+        // let cr = cairo::Context::new(&image_surface);
+        // cr.select_font_face(
+        //     "monospace",
+        //     cairo::FontSlant::Normal,
+        //     cairo::FontWeight::Bold,
+        // );
+        // cr.set_font_size(800.0);
+        // cr.set_source_rgb(1.0, 0.0, 0.0);
+        // cr.move_to(0.0, 750.0);
+        // cr.show_text("5m");
+
+        // let new_pixbuf =
+        //     gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
+        // let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
+
+        // unsafe {
+        //     gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, new_pixbuf_sys);
+        // }
+    }
+
     pub fn run(sender: glib::Sender<Msg>) -> Self {
         let tray = Self::new(sender);
         tray.set_tooltip_text("break-time");
