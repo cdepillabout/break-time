@@ -100,7 +100,7 @@ impl Scheduler {
         sched_sender
     }
 
-    fn run_loop(&mut self) {
+    fn run_loop(&mut self) -> ! {
       loop {
           match self.state {
               State::CountDownToBreak => {
