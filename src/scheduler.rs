@@ -4,7 +4,7 @@ use plugins::{CanBreak, Plugin};
 use super::config::Config;
 use super::tray::Tray;
 
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::{channel, Sender, Receiver};
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]
@@ -62,20 +62,29 @@ impl std::ops::Deref for Plugins {
     }
 }
 
+enum State {
+    CountDownToBreak,
+    WaitingForBreakEnd,
+}
+
 pub struct Scheduler {
     sender: glib::Sender<super::Msg>,
     plugins: Plugins,
     time_until_break: Duration,
+    receiver: Receiver<Msg>,
+    state: State,
 }
 
 const DEFAULT_TIME_UNTIL_BREAK: Duration = Duration::from_secs(1 * 10);
 
 impl Scheduler {
-    pub fn new(config: &Config, sender: glib::Sender<super::Msg>) -> Result<Self, ()> {
+    pub fn new(config: &Config, sender: glib::Sender<super::Msg>, receiver: Receiver<Msg>) -> Result<Self, ()> {
         Ok(Scheduler {
             sender,
             plugins: Plugins::new(config)?,
             time_until_break: DEFAULT_TIME_UNTIL_BREAK,
+            receiver,
+            state: State::CountDownToBreak,
         })
     }
 
@@ -83,23 +92,38 @@ impl Scheduler {
         let (sched_sender, sched_receiver) = channel();
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
-            let sched =
-                Scheduler::new(&config, sender).expect("Could not initialize plugins.");
+            let mut sched =
+                Scheduler::new(&config, sender, sched_receiver).expect("Could not initialize plugins.");
             println!("Scheduler initialized plugins");
-            loop {
-                sched.wait_until_break();
-
-                // The only kind of message we have so far is Start, which means we should just
-                // continue running this loop.
-                let _msg = sched_receiver
-                    .recv()
-                    .expect("Error receiving value in Scheduler.");
-            }
+            sched.run_loop();
         });
         sched_sender
     }
 
-    pub fn wait_until_break(&self) {
+    fn run_loop(&mut self) {
+      loop {
+          match self.state {
+              State::CountDownToBreak => {
+                  self.wait_until_break();
+                  self.state = State::WaitingForBreakEnd;
+              }
+              State::WaitingForBreakEnd => {
+                  // Wait for a message signalling a break ending.
+                  let msg = self.receiver
+                      .recv()
+                      .expect("Error receiving value in Scheduler.");
+
+                  match msg {
+                      Msg::Start => {
+                          self.state = State::CountDownToBreak;
+                      }
+                  }
+              }
+          }
+      }
+    }
+
+    fn wait_until_break(&self) {
         loop {
             println!(
                 "Scheduler sleeping until break time ({:?})",
