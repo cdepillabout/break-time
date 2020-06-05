@@ -75,6 +75,7 @@ impl CalFetcher {
             now + chrono::Duration::minutes(20);
 
         let res = has_events(
+            &self.email,
             &self.hub,
             &self.calendar_ids,
             ten_minutes_ago,
@@ -249,6 +250,7 @@ fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
 }
 
 fn has_events(
+    email: &str,
     hub: &CalHub,
     calendar_ids: &[String],
     start_time: chrono::DateTime<chrono::Utc>,
@@ -256,7 +258,17 @@ fn has_events(
 ) -> Result<HasEvent, GoogleCalErr> {
     let all_has_events: Vec<Result<HasEvent, GoogleCalErr>> = calendar_ids
         .iter()
-        .map(|calendar_id| has_event(hub, calendar_id, start_time, end_time))
+        .map(|calendar_id| {
+            // We only check calendar_ids that are equal to the email address we are looking for.
+            //
+            // TODO: Eventually, we probably want to let the user configure what email addresses
+            // they want to look for events on.
+            if email == calendar_id {
+                has_event(hub, calendar_id, start_time, end_time)
+            } else {
+                Ok(HasEvent::No)
+            }
+        })
         .collect();
 
     all_has_events
@@ -319,22 +331,24 @@ fn has_event(
 
     match result {
         Err(err) => {
-            // TODO: It is not possible to fetch from some calendars for some reason.  We just
-            // swallow these errors here.
-            println!("Error fetching events from {}: {}Ignoring error...", calendar_id, err);
-            Ok(HasEvent::No)
+            Err(GoogleCalErr::FetchingEvents {
+                calendar_id: String::from(calendar_id),
+                google_cal_err: err,
+            })
         }
-        Ok((_, events)) => match events.items {
-            None => Ok(HasEvent::No),
-            Some(event_items) => {
-                if event_items.len() >= 1 {
-                    println!("There were some event items! {:?}", event_items);
-                    Ok(HasEvent::Yes)
-                } else {
-                    Ok(HasEvent::No)
+        Ok((_, events)) => {
+            match events.items {
+                None => Ok(HasEvent::No),
+                Some(event_items) => {
+                    if event_items.len() >= 1 {
+                        println!("There were some event items from calendar id {}: {:?}", calendar_id, event_items);
+                        Ok(HasEvent::Yes)
+                    } else {
+                        Ok(HasEvent::No)
+                    }
                 }
             }
-        },
+        }
     }
 }
 
