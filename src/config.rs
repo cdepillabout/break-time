@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use indoc::indoc;
 use serde::{Deserialize, Serialize};
 
+use crate::opts::{Opts};
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct PluginSettings(pub toml::value::Table);
@@ -55,8 +57,8 @@ impl Default for Settings {
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    pub base_dir: xdg::BaseDirectories,
     pub file_path: PathBuf,
+    pub cache_dir: PathBuf,
     pub settings: Settings,
 }
 
@@ -75,13 +77,34 @@ const DEFAULT_SETTINGS: &str = indoc!(
 
 impl Config {
     // TODO: Change some of the panics in this function to returning errors.
-    pub fn load() -> Result<Self, ()> {
-        let base_dir = xdg::BaseDirectories::with_prefix("break-time")
-            .map_err(|xdg_base_dir_err| ())?;
+    pub fn load(opts: Opts) -> Result<Self, ()> {
+        let config_file_path =
+            match opts.conf_dir {
+                Some(conf_dir) => {
+                    std::fs::create_dir_all(&conf_dir).map_err(|io_err| ())?;
+                    conf_dir.join("break-time")
+                }
+                None => {
+                    let xdg_base_dir =
+                        xdg::BaseDirectories::with_prefix("break-time")
+                            .map_err(|xdg_base_dir_err| ())?;
+                    xdg_base_dir
+                        .place_config_file("config.toml")
+                        .map_err(|io_err| ())?
+                }
+            };
 
-        let config_file_path = base_dir
-            .place_config_file("config.toml")
-            .map_err(|io_err| ())?;
+        let cache_dir =
+            match opts.cache_dir {
+                Some(cache_dir) => cache_dir,
+                None => {
+                    let xdg_base_dir =
+                        xdg::BaseDirectories::with_prefix("break-time")
+                            .map_err(|xdg_base_dir_err| ())?;
+                    xdg_base_dir.get_cache_home()
+                }
+            };
+        std::fs::create_dir_all(&cache_dir).map_err(|io_err| ())?;
 
         // Try reading the config file to see whether it exists or not.
         let res_config_file = std::fs::read_to_string(&config_file_path);
@@ -122,8 +145,8 @@ impl Config {
         };
 
         let config = Config {
-            base_dir,
             file_path: config_file_path,
+            cache_dir,
             settings,
         };
 

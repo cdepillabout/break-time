@@ -40,15 +40,13 @@ pub struct CalFetcher {
 
 impl CalFetcher {
     pub fn new(
-        break_time_config_base_dir: &xdg::BaseDirectories,
+        break_time_cache_dir: &Path,
         email: String,
     ) -> Result<Self, ()> {
         let google_cal_dir_name = Path::new("google-calendar");
         let token_rel_path = google_cal_dir_name.join(&email);
 
-        let token_path = break_time_config_base_dir
-            .place_config_file(token_rel_path)
-            .map_err(|io_err| ())?;
+        let token_path = break_time_cache_dir.join(token_rel_path);
 
         let token_path_string = token_path.to_string_lossy().into_owned();
         let disk_token_storage: DiskTokenStorage = DiskTokenStorage::new(
@@ -148,13 +146,12 @@ pub struct GoogleCalendar {
 
 impl GoogleCalendar {
     pub fn new(config: &Config) -> Result<Self, ()> {
-        let break_time_config_base_dir: &xdg::BaseDirectories =
-            &config.base_dir;
+        let break_time_cache_dir: &Path = &config.cache_dir;
         let emails = get_emails(&config.settings.all_plugin_settings)?;
 
         let fetchers_res = emails
             .into_iter()
-            .map(|email| CalFetcher::new(break_time_config_base_dir, email))
+            .map(|email| CalFetcher::new(break_time_cache_dir, email))
             .collect();
 
         let fetchers = collect_first_err(fetchers_res)?;

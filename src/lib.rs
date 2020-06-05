@@ -3,6 +3,7 @@
 #![warn(clippy::nursery)]
 
 mod config;
+mod opts;
 mod prelude;
 mod scheduler;
 mod tray;
@@ -48,7 +49,9 @@ fn handle_msg_recv(
 }
 
 pub fn default_main() {
-    let config = Config::load().expect("Could not load config file.");
+    let opts = opts::Opts::parse_from_args();
+
+    let config = Config::load(opts).expect("Could not load config file.");
 
     gtk::init().expect("Could not initialize GTK");
 
