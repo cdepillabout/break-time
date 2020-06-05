@@ -322,7 +322,7 @@ fn has_event(
         .list(calendar_id)
         .add_scope(Scope::Readonly)
         .add_scope(Scope::EventReadonly)
-        // all events the occur over the next 20 minutes
+        // all events that occur over the next 20 minutes
         .time_min(&start_time.to_rfc3339())
         .time_max(&end_time.to_rfc3339())
         .doit();
