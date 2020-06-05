@@ -44,9 +44,11 @@ impl CalFetcher {
         email: String,
     ) -> Result<Self, ()> {
         let google_cal_dir_name = Path::new("google-calendar");
-        let token_rel_path = google_cal_dir_name.join(&email);
+        let google_cal_dir_path = break_time_cache_dir.join(google_cal_dir_name);
 
-        let token_path = break_time_cache_dir.join(token_rel_path);
+        std::fs::create_dir_all(&google_cal_dir_path).map_err(|io_err| ())?;
+
+        let token_path = google_cal_dir_path.join(&email);
 
         let token_path_string = token_path.to_string_lossy().into_owned();
         let disk_token_storage: DiskTokenStorage = DiskTokenStorage::new(
