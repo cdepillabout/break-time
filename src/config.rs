@@ -42,6 +42,7 @@ impl Default for PluginSettings {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Settings {
     pub break_duration_seconds: u32,
+    pub break_frequency_minutes: u32,
     #[serde(rename = "plugin")]
     pub all_plugin_settings: PluginSettings,
 }
@@ -50,6 +51,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             break_duration_seconds: 600,
+            break_frequency_minutes: 50,
             all_plugin_settings: Default::default(),
         }
     }
@@ -67,6 +69,9 @@ const DEFAULT_SETTINGS: &str = indoc!(
     # The number of seconds in a break.
     break_duration_seconds = 600 # 10 minutes
 
+    # The number of minutes in between breaks.
+    break_frequency_minutes = 50
+
     [plugin.google_calendar]
     # A list of strings, one for each Google account you want to authenticate with.
     accounts = []
@@ -78,18 +83,19 @@ const DEFAULT_SETTINGS: &str = indoc!(
 impl Config {
     // TODO: Change some of the panics in this function to returning errors.
     pub fn load(opts: Opts) -> Result<Self, ()> {
+        let config_file_name = "config.toml";
         let config_file_path =
             match opts.conf_dir {
                 Some(conf_dir) => {
                     std::fs::create_dir_all(&conf_dir).map_err(|io_err| ())?;
-                    conf_dir.join("break-time")
+                    conf_dir.join(config_file_name)
                 }
                 None => {
                     let xdg_base_dir =
                         xdg::BaseDirectories::with_prefix("break-time")
                             .map_err(|xdg_base_dir_err| ())?;
                     xdg_base_dir
-                        .place_config_file("config.toml")
+                        .place_config_file(config_file_name)
                         .map_err(|io_err| ())?
                 }
             };
