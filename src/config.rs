@@ -41,17 +41,34 @@ impl Default for PluginSettings {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Settings {
+    #[serde(default = "default_break_duration_seconds")]
     pub break_duration_seconds: u32,
-    pub break_frequency_minutes: u32,
+    #[serde(default = "default_minutes_between_breaks")]
+    pub minutes_between_breaks: u32,
+    #[serde(default = "default_clicks_to_end_break_early")]
+    pub clicks_to_end_break_early: u32,
     #[serde(rename = "plugin")]
     pub all_plugin_settings: PluginSettings,
+}
+
+fn default_break_duration_seconds() -> u32 {
+    600
+}
+
+fn default_minutes_between_breaks() -> u32 {
+    50
+}
+
+fn default_clicks_to_end_break_early() -> u32 {
+    100
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            break_duration_seconds: 600,
-            break_frequency_minutes: 50,
+            break_duration_seconds: default_break_duration_seconds(),
+            minutes_between_breaks: default_minutes_between_breaks(),
+            clicks_to_end_break_early: default_clicks_to_end_break_early(),
             all_plugin_settings: Default::default(),
         }
     }
@@ -70,7 +87,7 @@ const DEFAULT_SETTINGS: &str = indoc!(
     break_duration_seconds = 600 # 10 minutes
 
     # The number of minutes in between breaks.
-    break_frequency_minutes = 50
+    minutes_between_breaks = 50
 
     [plugin.google_calendar]
     # A list of strings, one for each Google account you want to authenticate with.

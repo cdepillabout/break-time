@@ -75,14 +75,12 @@ pub struct Scheduler {
     state: State,
 }
 
-const DEFAULT_TIME_UNTIL_BREAK: Duration = Duration::from_secs(1 * 10);
-
 impl Scheduler {
     pub fn new(config: &Config, sender: glib::Sender<super::Msg>, receiver: Receiver<Msg>) -> Result<Self, ()> {
         Ok(Scheduler {
             sender,
             plugins: Plugins::new(config)?,
-            time_until_break: DEFAULT_TIME_UNTIL_BREAK,
+            time_until_break: Duration::from_secs((config.settings.minutes_between_breaks * 60).into()),
             receiver,
             state: State::CountDownToBreak,
         })
