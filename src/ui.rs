@@ -9,6 +9,7 @@ use glib::source::Continue;
 use gtk::Inhibit;
 use std::time::{Duration, Instant};
 
+use crate::config::Config;
 use super::Msg;
 use prelude::*;
 use state::{Message, State};
@@ -94,7 +95,7 @@ fn setup(state: &State) {
     }
 }
 
-fn connect_events(state: &State) {
+fn connect_events(config: &Config, state: &State) {
     for window in state.get_app_wins() {
         window.connect_key_press_event(
             clone!(@strong state => move |_, event_key| {
@@ -111,13 +112,13 @@ fn connect_events(state: &State) {
 
     gtk::timeout_add(
         200,
-        clone!(@strong state => move || {
+        clone!(@strong state, @strong config => move || {
 
             let now = Instant::now();
             let time_diff = now.saturating_duration_since(state.start_instant);
 
             // the full time we want to wait for
-            let full_time = Duration::new(20, 0);
+            let full_time = Duration::new(config.settings.break_duration_seconds.into(), 0);
 
             let option_time_remaining = full_time.checked_sub(time_diff);
 
@@ -213,7 +214,7 @@ fn setup_windows(state: &State) {
     }
 }
 
-pub fn start_break(app_sender: glib::Sender<Msg>) {
+pub fn start_break(config: &Config, app_sender: glib::Sender<Msg>) {
     let x11 = X11::connect();
 
     let net_active_win_atom = x11.create_atom("_NET_ACTIVE_WINDOW").expect(
@@ -229,11 +230,11 @@ pub fn start_break(app_sender: glib::Sender<Msg>) {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let state = State::new(app_sender, sender);
+    let state = State::new(config, app_sender, sender);
 
     setup(&state);
 
-    connect_events(&state);
+    connect_events(&config, &state);
 
     redisplay(&state);
 

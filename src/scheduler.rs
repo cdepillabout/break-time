@@ -86,12 +86,13 @@ impl Scheduler {
         })
     }
 
-    pub fn run(config: Config, sender: glib::Sender<super::Msg>) -> Sender<Msg> {
+    pub fn run(config: &Config, sender: glib::Sender<super::Msg>) -> Sender<Msg> {
         let (sched_sender, sched_receiver) = channel();
+        let config_clone = config.clone();
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
             let mut sched =
-                Scheduler::new(&config, sender, sched_receiver).expect("Could not initialize plugins.");
+                Scheduler::new(&config_clone, sender, sched_receiver).expect("Could not initialize plugins.");
             println!("Scheduler initialized plugins");
             sched.run_loop();
         });

@@ -4,6 +4,7 @@ use std::sync::{Arc, RwLock, RwLockReadGuard};
 use std::time::Instant;
 
 use crate::Msg;
+use crate::config::Config;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
@@ -68,6 +69,7 @@ pub struct State {
 
 impl State {
     pub fn new(
+        config: &Config,
         app_sender: glib::Sender<Msg>,
         sender: glib::Sender<Message>,
     ) -> Self {
@@ -82,7 +84,7 @@ impl State {
             builders,
             monitors,
             sender,
-            presses_remaining: Arc::new(RwLock::new(2)),
+            presses_remaining: Arc::new(RwLock::new(config.settings.clicks_to_end_break_early)),
             start_instant: Instant::now(),
             app_sender,
         }

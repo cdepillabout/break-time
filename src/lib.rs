@@ -25,6 +25,7 @@ pub enum Msg {
 }
 
 fn handle_msg_recv(
+    config: &Config,
     sender: glib::Sender<Msg>,
     scheduler_sender: Sender<scheduler::Msg>,
     tray: &Tray,
@@ -40,7 +41,7 @@ fn handle_msg_recv(
         }
         Msg::StartBreak => {
             println!("starting break");
-            ui::start_break(sender);
+            ui::start_break(config, sender);
         }
         Msg::TimeRemainingBeforeBreak => {
             tray.render_time_remaining_before_break();
@@ -63,10 +64,10 @@ pub fn default_main() {
     let tray = tray::Tray::run(sender.clone());
 
     println!("Starting the scheduler...");
-    let scheduler_sender = Scheduler::run(config, sender.clone());
+    let scheduler_sender = Scheduler::run(&config, sender.clone());
 
     receiver.attach(None, move |msg| {
-        handle_msg_recv(sender.clone(), scheduler_sender.clone(), &tray, msg);
+        handle_msg_recv(&config, sender.clone(), scheduler_sender.clone(), &tray, msg);
         glib::source::Continue(true)
     });
 
