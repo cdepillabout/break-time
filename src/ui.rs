@@ -102,10 +102,8 @@ fn connect_events(config: &Config, state: &State) {
                 if event_key.get_keyval() == gdk::enums::key::space {
                     decrement_presses_remaining(&state);
                     redisplay(&state);
-                    Inhibit(true)
-                } else {
-                    Inhibit(false)
                 }
+                Inhibit(false)
             }),
         );
     }
