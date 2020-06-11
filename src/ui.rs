@@ -129,7 +129,10 @@ fn connect_events(config: &Config, state: &State) {
                 }
                 Some(time_remaining) => {
                     for label in state.get_time_remaining_labels() {
-                        label.set_text(&format!("{:?}", time_remaining));
+                        let total_secs_remaining = time_remaining.as_secs();
+                        let mins: u64 = total_secs_remaining / 60;
+                        let secs: u64 = total_secs_remaining % 60;
+                        label.set_text(&format!("{:02}:{:02}", mins, secs));
                     }
                     Continue(true)
                 }
