@@ -142,57 +142,89 @@ impl WindowTitles {
     }
 }
 
-struct CanBreakPred<F>(F);
+struct CanBreakPred(Box<dyn Fn(&WinProps) -> CanBreak>);
 
-impl<F> CanBreakPred<F> {
-    pub fn new(f: F) -> Self {
-        Self(f)
-    }
-}
+// impl<F> CanBreakPred<F>
+// where
+//     F: Fn(&WinProps) -> CanBreak,
+// {
+//     // pub fn new(f: F) -> CanBreakPred<impl Fn(&WinProps) -> CanBreak> {
+//     //     Self(f)
+//     // }
 
-impl<F> CanBreakPred<F> where
-    F: Fn(&WinProps) -> CanBreak
-{
-    pub fn from_name_class<G>(g: G) -> Self
-        where
-            G: Fn(&str, &str, &str) -> CanBreak
+    fn from_name_class<G>(g: G) -> CanBreakPred
+    where
+        G: 'static + Fn(&str, &str, &str) -> CanBreak,
     {
-        Self::new(|win_props: &WinProps| {
-            match (win_props.net_wm_name, win_props.class_name, win_props.class) {
-                (Ok(net_wm_name), Ok(class_name), Ok(class)) =>
-                    g(&net_wm_name, &class_name, &class),
-                _ => CanBreak::Yes
-            }
-        })
-    }
-}
-
-struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
-
-impl<F> CanBreakPreds<F>
-{
-    pub fn new(f: Vec<CanBreakPred<F>>) -> Self {
-        Self(f)
-    }
-}
-
-impl<F> CanBreakPreds<F> where
-    F: Fn(&WinProps) -> CanBreak
-{
-    pub fn all() -> Self {
-        Self::new(vec![
-            CanBreakPred::from_name_class(|net_wm_name, class_name, class| {
-              if class == "Firefox" && class_name == "Navigator" {
-                if net_wm_name.starts_with("Meet") {
-                  return CanBreak::No;
+        CanBreakPred(Box::new(move |win_props: &WinProps| {
+            match (&win_props.net_wm_name, &win_props.class_name, &win_props.class)
+            {
+                (Ok(net_wm_name), Ok(class_name), Ok(class)) => {
+                    g(&net_wm_name, &class_name, &class)
                 }
-              }
-              CanBreak::Yes
-            })
-        ])
+                _ => CanBreak::Yes,
+            }
+        }))
     }
+// }
+
+struct CanBreakPreds(Vec<CanBreakPred>);
+
+fn all() -> CanBreakPreds {
+    let fff: CanBreakPred = from_name_class(
+        |net_wm_name: &str, class_name: &str, class: &str| -> CanBreak {
+            if class == "Firefox" && class_name == "Navigator" {
+                if net_wm_name.starts_with("Meet") {
+                    return CanBreak::No;
+                }
+            }
+            CanBreak::Yes
+        }
+    );
+    CanBreakPreds(vec![fff])
 }
 
+// struct CanBreakPred<F>(F);
+
+// impl<F> CanBreakPred<F>
+// where
+//     F: Fn(&WinProps) -> CanBreak,
+// {
+//     // pub fn new(f: F) -> CanBreakPred<impl Fn(&WinProps) -> CanBreak> {
+//     //     Self(f)
+//     // }
+
+//     pub fn from_name_class<G>(g: G) -> CanBreakPred<Box<dyn Fn(&WinProps) -> CanBreak>>
+//     where
+//         G: 'static + Fn(&str, &str, &str) -> CanBreak,
+//     {
+//         Self(Box::new(move |win_props: &WinProps| {
+//             match (&win_props.net_wm_name, &win_props.class_name, &win_props.class)
+//             {
+//                 (Ok(net_wm_name), Ok(class_name), Ok(class)) => {
+//                     g(&net_wm_name, &class_name, &class)
+//                 }
+//                 _ => CanBreak::Yes,
+//             }
+//         }))
+//     }
+// }
+
+// struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
+
+// pub fn all() -> CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
+//     let fff: CanBreakPred<Box<dyn Fn(&WinProps) -> CanBreak>> = CanBreakPred::from_name_class(
+//         |net_wm_name: &str, class_name: &str, class: &str| -> CanBreak {
+//             if class == "Firefox" && class_name == "Navigator" {
+//                 if net_wm_name.starts_with("Meet") {
+//                     return CanBreak::No;
+//                 }
+//             }
+//             CanBreak::Yes
+//         }
+//     );
+//     CanBreakPreds(vec![fff])
+// }
 
 const PROP_STARTING_OFFSET: u32 = 0;
 const PROP_LENGTH_TO_GET: u32 = 2048;
@@ -325,7 +357,11 @@ impl<T: Clone> ClassInfo<T> {
 
 impl Plugin for WindowTitles {
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
-        let custom_error = std::io::Error::new(std::io::ErrorKind::Other, "TODO: change this to an actual error");
-        self.can_break().map_err(|()| Box::new(custom_error) as Box<dyn std::error::Error>)
+        let custom_error = std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "TODO: change this to an actual error",
+        );
+        self.can_break()
+            .map_err(|()| Box::new(custom_error) as Box<dyn std::error::Error>)
     }
 }
