@@ -115,29 +115,12 @@ impl WindowTitles {
         Ok(query_tree_reply.children().to_vec())
     }
 
-    fn can_break_win_prop(&self, win_props: &WinProps) -> CanBreak {
-        dbg!(win_props);
-        if let Ok(class) = &win_props.class {
-            if let Ok(class_name) = &win_props.class_name {
-                if let Ok(net_wm_name) = &win_props.net_wm_name {
-                    if class == "Firefox" && class_name == "Navigator" {
-                        if net_wm_name.starts_with("Meet") {
-                            return CanBreak::No;
-                        }
-                    }
-                }
-            }
-        }
-
-        CanBreak::Yes
-    }
-
     fn can_break(&self) -> Result<CanBreak, ()> {
         let all_win_props: Vec<WinProps> = self.get_all_win_props()?;
         let all_can_break_preds = CanBreakPreds::all();
-        let can_break_bool = all_win_props
-            .iter()
-            .all(|win_props| self.can_break_win_prop(win_props).into_bool());
+        let can_break_bool = all_win_props.iter().all(|win_props| {
+            all_can_break_preds.can_break(win_props).into_bool()
+        });
         let can_break_res = CanBreak::from_bool(can_break_bool);
         Ok(can_break_res)
     }
@@ -173,78 +156,46 @@ struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
 
 impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
     fn all() -> CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
-        CanBreakPreds(
-            vec![
-                CanBreakPred::from_name_class(
-                    |net_wm_name: &str, class_name: &str, class: &str| -> CanBreak {
-                        if class == "Firefox" && class_name == "Navigator" {
-                            if net_wm_name.starts_with("Meet") {
-                                return CanBreak::No;
-                            }
-                        }
+        CanBreakPreds(vec![
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    if class == "Firefox"
+                        && class_name == "Navigator"
+                        && net_wm_name.starts_with("Meet")
+                    {
+                        CanBreak::No
+                    } else {
                         CanBreak::Yes
-                    },
-                ),
-                CanBreakPred::from_name_class(
-                    |net_wm_name: &str, class_name: &str, class: &str| -> CanBreak {
-                        if class == "Chromium-browser" && class_name == "chromium-browser" {
-                            if net_wm_name.starts_with("Meet") {
-                                return CanBreak::No;
-                            }
-                        }
+                    }
+                },
+            ),
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    if class == "Chromium-browser"
+                        && class_name == "chromium-browser"
+                        && net_wm_name.starts_with("Meet")
+                    {
+                        CanBreak::No
+                    } else {
                         CanBreak::Yes
-                    },
-                )
-            ]
-        )
+                    }
+                },
+            ),
+        ])
     }
 
-    fn can_break(&self, win_props: &WinProps) {
-        CanBreak::from_bool(self.0.iter().all(|can_break_pred| can_break_pred.can_break(win_props).into_bool()))
+    fn can_break(&self, win_props: &WinProps) -> CanBreak {
+        CanBreak::from_bool(self.0.iter().all(|can_break_pred| {
+            can_break_pred.can_break(win_props).into_bool()
+        }))
     }
 }
-
-// struct CanBreakPred<F>(F);
-
-// impl<F> CanBreakPred<F>
-// where
-//     F: Fn(&WinProps) -> CanBreak,
-// {
-//     // pub fn new(f: F) -> CanBreakPred<impl Fn(&WinProps) -> CanBreak> {
-//     //     Self(f)
-//     // }
-
-//     pub fn from_name_class<G>(g: G) -> CanBreakPred<Box<dyn Fn(&WinProps) -> CanBreak>>
-//     where
-//         G: 'static + Fn(&str, &str, &str) -> CanBreak,
-//     {
-//         Self(Box::new(move |win_props: &WinProps| {
-//             match (&win_props.net_wm_name, &win_props.class_name, &win_props.class)
-//             {
-//                 (Ok(net_wm_name), Ok(class_name), Ok(class)) => {
-//                     g(&net_wm_name, &class_name, &class)
-//                 }
-//                 _ => CanBreak::Yes,
-//             }
-//         }))
-//     }
-// }
-
-// struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
-
-// pub fn all() -> CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
-//     let fff: CanBreakPred<Box<dyn Fn(&WinProps) -> CanBreak>> = CanBreakPred::from_name_class(
-//         |net_wm_name: &str, class_name: &str, class: &str| -> CanBreak {
-//             if class == "Firefox" && class_name == "Navigator" {
-//                 if net_wm_name.starts_with("Meet") {
-//                     return CanBreak::No;
-//                 }
-//             }
-//             CanBreak::Yes
-//         }
-//     );
-//     CanBreakPreds(vec![fff])
-// }
 
 const PROP_STARTING_OFFSET: u32 = 0;
 const PROP_LENGTH_TO_GET: u32 = 2048;
