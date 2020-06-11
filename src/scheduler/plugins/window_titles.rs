@@ -116,6 +116,7 @@ impl WindowTitles {
     }
 
     fn can_break_win_prop(&self, win_props: &WinProps) -> CanBreak {
+        dbg!(win_props);
         if let Ok(class) = &win_props.class {
             if let Ok(class_name) = &win_props.class_name {
                 if let Ok(net_wm_name) = &win_props.net_wm_name {
@@ -140,6 +141,58 @@ impl WindowTitles {
         Ok(can_break_res)
     }
 }
+
+struct CanBreakPred<F>(F);
+
+impl<F> CanBreakPred<F> {
+    pub fn new(f: F) -> Self {
+        Self(f)
+    }
+}
+
+impl<F> CanBreakPred<F> where
+    F: Fn(&WinProps) -> CanBreak
+{
+    pub fn from_name_class<G>(g: G) -> Self
+        where
+            G: Fn(&str, &str, &str) -> CanBreak
+    {
+        Self::new(|win_props: &WinProps| {
+            match (win_props.net_wm_name, win_props.class_name, win_props.class) {
+                (Ok(net_wm_name), Ok(class_name), Ok(class)) =>
+                    g(&net_wm_name, &class_name, &class),
+                _ => CanBreak::Yes
+            }
+        })
+    }
+}
+
+struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
+
+impl<F> CanBreakPreds<F>
+{
+    pub fn new(f: Vec<CanBreakPred<F>>) -> Self {
+        Self(f)
+    }
+}
+
+impl<F> CanBreakPreds<F> where
+    F: Fn(&WinProps) -> CanBreak
+{
+    pub fn all() -> Self {
+        Self::new(vec![
+            CanBreakPred::from_name_class(|net_wm_name, class_name, class| {
+              if class == "Firefox" && class_name == "Navigator" {
+                if net_wm_name.starts_with("Meet") {
+                  return CanBreak::No;
+                }
+              }
+              CanBreak::Yes
+            })
+        ])
+    }
+}
+
 
 const PROP_STARTING_OFFSET: u32 = 0;
 const PROP_LENGTH_TO_GET: u32 = 2048;

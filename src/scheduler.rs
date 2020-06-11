@@ -80,7 +80,7 @@ impl Scheduler {
         Ok(Scheduler {
             sender,
             plugins: Plugins::new(config)?,
-            time_until_break: Duration::from_secs((config.settings.minutes_between_breaks * 60).into()),
+            time_until_break: Duration::from_secs(config.settings.seconds_between_breaks.into()),
             receiver,
             state: State::CountDownToBreak,
         })
