@@ -11,6 +11,7 @@ pub mod ui;
 mod x11;
 
 use std::sync::mpsc::Sender;
+use std::time::Duration;
 
 use config::Config;
 use prelude::*;
@@ -20,7 +21,7 @@ use tray::Tray;
 pub enum Msg {
     EndBreak,
     Quit,
-    TimeRemainingBeforeBreak,
+    TimeRemainingBeforeBreak(Duration),
     StartBreak,
 }
 
@@ -43,8 +44,8 @@ fn handle_msg_recv(
             println!("starting break");
             ui::start_break(config, sender);
         }
-        Msg::TimeRemainingBeforeBreak => {
-            tray.render_time_remaining_before_break();
+        Msg::TimeRemainingBeforeBreak(remaining_time) => {
+            tray.render_time_remaining_before_break(remaining_time);
         }
     }
 }

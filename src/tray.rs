@@ -1,6 +1,7 @@
 #![allow(unsafe_code)]
 
 pub use glib::translate::*;
+use std::time::Duration;
 
 use crate::prelude::*;
 use crate::Msg;
@@ -126,8 +127,8 @@ impl Tray {
         }
     }
 
-    pub fn render_time_remaining_before_break(&self) {
-        println!("Called render time remaining before break...");
+    pub fn render_time_remaining_before_break(&self, remaining_time: Duration) {
+        println!("Called render time remaining before break, remaining_time: {:?}...", remaining_time);
         // let mut whowhowho: &[u8] = IMG;
         // let whowhowho1: &mut &[u8] = &mut whowhowho;
 

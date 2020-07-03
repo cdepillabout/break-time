@@ -124,11 +124,7 @@ impl Scheduler {
 
     fn wait_until_break(&self) {
         loop {
-            println!(
-                "Scheduler sleeping until break time ({:?})",
-                self.time_until_break
-            );
-            std::thread::sleep(self.time_until_break);
+            self.blahblah();
             println!(
                 "Scheduler finished sleeping, checking if it can break now..."
             );
@@ -155,4 +151,48 @@ impl Scheduler {
             }
         }
     }
+
+    fn blahblah(&self) {
+        let mut remaining_time = self.time_until_break;
+        println!("Starting blahblahblah...");
+        for &period in PERIODS_TO_SEND_TIME_LEFT_MESSAGE.iter() {
+            let opt_time_to_sleep = remaining_time.checked_sub(period);
+            println!("================================================================");
+            println!("In blahblahblah loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}", period, remaining_time, opt_time_to_sleep);
+            match opt_time_to_sleep {
+                None => {
+                }
+                Some(time_to_sleep) => {
+                    std::thread::sleep(time_to_sleep);
+                    self.sender.send(super::Msg::TimeRemainingBeforeBreak(period));
+                    remaining_time -= time_to_sleep;
+                }
+            }
+        }
+    }
 }
+
+const PERIODS_TO_SEND_TIME_LEFT_MESSAGE: [Duration; 22] = [
+    Duration::from_secs(60 * 5),
+    Duration::from_secs(60 * 4),
+    Duration::from_secs(60 * 3),
+    Duration::from_secs(60 * 2),
+    Duration::from_secs(60 * 1),
+    Duration::from_secs(30),
+    Duration::from_secs(15),
+    Duration::from_secs(14),
+    Duration::from_secs(13),
+    Duration::from_secs(12),
+    Duration::from_secs(11),
+    Duration::from_secs(10),
+    Duration::from_secs(9),
+    Duration::from_secs(8),
+    Duration::from_secs(7),
+    Duration::from_secs(6),
+    Duration::from_secs(5),
+    Duration::from_secs(4),
+    Duration::from_secs(3),
+    Duration::from_secs(2),
+    Duration::from_secs(1),
+    Duration::from_secs(0),
+    ];
