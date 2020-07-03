@@ -124,7 +124,7 @@ impl Scheduler {
 
     fn wait_until_break(&self) {
         loop {
-            self.blahblah();
+            self.send_msgs_while_waiting();
             println!(
                 "Scheduler finished sleeping, checking if it can break now..."
             );
@@ -152,15 +152,15 @@ impl Scheduler {
         }
     }
 
-    fn blahblah(&self) {
+    fn send_msgs_while_waiting(&self) {
         let mut remaining_time = self.time_until_break;
-        println!("Starting blahblahblah...");
         for &period in PERIODS_TO_SEND_TIME_LEFT_MESSAGE.iter() {
             let opt_time_to_sleep = remaining_time.checked_sub(period);
-            println!("================================================================");
-            println!("In blahblahblah loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}", period, remaining_time, opt_time_to_sleep);
+            // println!("In send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}", period, remaining_time, opt_time_to_sleep);
             match opt_time_to_sleep {
                 None => {
+                    // This happens when the periods to send the time-left message are greater than
+                    // the remaining time.  We can just skip this.
                 }
                 Some(time_to_sleep) => {
                     std::thread::sleep(time_to_sleep);
