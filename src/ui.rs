@@ -156,11 +156,13 @@ fn setup_windows(state: &State) {
         window.show_all();
 
         let monitor_rect = monitor.get_geometry();
+        window.set_default_size(monitor_rect.width, monitor_rect.height);
+        window.resize(monitor_rect.width, monitor_rect.height);
+        window.move_(monitor_rect.x, monitor_rect.y);
+
         let gdk_window: gdk::Window = window.get_window().expect(
             "Gtk::Window should always be able to be converted to Gdk::Window",
         );
-        gdk_window.fullscreen_on_monitor(monitor.id);
-        gdk_window.resize(monitor_rect.width, monitor_rect.height);
 
         // Grab the mouse and keyboard on the first Window.
         if i == 0 {
