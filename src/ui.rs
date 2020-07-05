@@ -37,42 +37,51 @@ fn handle_msg_recv(
             }
             state.notify_app_end();
 
-            if let Some(old_active_win) = option_old_active_win {
-                let message_data = xcb::ClientMessageData::from_data32([
-                    XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER,
-                    xcb::CURRENT_TIME,
-                    xcb::WINDOW_NONE,
-                    0,
-                    0,
-                ]);
-
-                let message_event = xcb::ClientMessageEvent::new(
-                    // Data size (8-bit, 16-bit, or 32-bit).  This message is 32-bit.
-                    32,
-                    old_active_win,
-                    net_active_win_atom,
-                    message_data,
-                );
-
-                let res = xcb::send_event(
-                    &x11.conn,
-                    false,
-                    root_win,
-                    xcb::EVENT_MASK_SUBSTRUCTURE_NOTIFY
-                        | xcb::EVENT_MASK_SUBSTRUCTURE_REDIRECT,
-                    &message_event,
-                )
-                .request_check();
-
-                match res {
-                    Ok(()) => (),
-                    Err(err) => {
-                        println!("Could not focus old focused window: {}", err)
-                    }
-                }
-            }
+            focus_previous_window(x11, root_win, net_active_win_atom, option_old_active_win);
 
             Continue(false)
+        }
+    }
+}
+
+fn focus_previous_window(
+    x11: &X11,
+    root_win: xcb::Window,
+    net_active_win_atom: xcb::Atom,
+    option_old_active_win: Option<xcb::Window>,
+) {
+    if let Some(old_active_win) = option_old_active_win {
+        let message_data = xcb::ClientMessageData::from_data32([
+            XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER,
+            xcb::CURRENT_TIME,
+            xcb::WINDOW_NONE,
+            0,
+            0,
+        ]);
+
+        let message_event = xcb::ClientMessageEvent::new(
+            // Data size (8-bit, 16-bit, or 32-bit).  This message is 32-bit.
+            32,
+            old_active_win,
+            net_active_win_atom,
+            message_data,
+        );
+
+        let res = xcb::send_event(
+            &x11.conn,
+            false,
+            root_win,
+            xcb::EVENT_MASK_SUBSTRUCTURE_NOTIFY
+                | xcb::EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+            &message_event,
+        )
+        .request_check();
+
+        match res {
+            Ok(()) => (),
+            Err(err) => {
+                println!("Could not focus old focused window: {}", err)
+            }
         }
     }
 }
