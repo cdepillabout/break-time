@@ -128,31 +128,39 @@ impl Tray {
     }
 
     pub fn render_time_remaining_before_break(&self, remaining_time: Duration) {
-        println!("Called render time remaining before break, remaining_time: {:?}...", remaining_time);
-        // let mut whowhowho: &[u8] = IMG;
-        // let whowhowho1: &mut &[u8] = &mut whowhowho;
+        // println!("Called render time remaining before break, remaining_time: {:?}...", remaining_time);
+        let img: &mut &[u8] = &mut IMG.clone();
 
-        // let image_surface = cairo::ImageSurface::create_from_png(whowhowho1)
-        //     .expect("should create png from mem");
+        let image_surface = cairo::ImageSurface::create_from_png(img)
+            .expect("should create png from mem");
 
-        // let cr = cairo::Context::new(&image_surface);
-        // cr.select_font_face(
-        //     "monospace",
-        //     cairo::FontSlant::Normal,
-        //     cairo::FontWeight::Bold,
-        // );
-        // cr.set_font_size(800.0);
-        // cr.set_source_rgb(1.0, 0.0, 0.0);
-        // cr.move_to(0.0, 750.0);
-        // cr.show_text("5m");
+        let remaining_time_text = duration_to_text(remaining_time);
+        let remaining_time_text_len = remaining_time_text.len();
 
-        // let new_pixbuf =
-        //     gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
-        // let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
+        let cr = cairo::Context::new(&image_surface);
+        cr.select_font_face(
+            "monospace",
+            cairo::FontSlant::Normal,
+            cairo::FontWeight::Bold,
+        );
+        cr.set_font_size(800.0);
+        cr.set_source_rgb(1.0, 0.0, 0.0);
 
-        // unsafe {
-        //     gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, new_pixbuf_sys);
-        // }
+        if remaining_time_text_len <= 1 {
+            cr.move_to(250.0, 750.0);
+        } else {
+            cr.move_to(0.0, 750.0);
+        }
+
+        cr.show_text(&remaining_time_text);
+
+        let new_pixbuf =
+            gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
+        let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
+
+        unsafe {
+            gtk_sys::gtk_status_icon_set_from_pixbuf(self.status_icon, new_pixbuf_sys);
+        }
     }
 
     pub fn run(sender: glib::Sender<Msg>) -> Self {
@@ -187,5 +195,13 @@ impl Tray {
         );
 
         tray
+    }
+}
+
+fn duration_to_text(duration: Duration) -> String {
+    if duration > Duration::from_secs(60) {
+        format!("{}m", duration.as_secs() / 60)
+    } else {
+        duration.as_secs().to_string()
     }
 }
