@@ -42,6 +42,7 @@ fn handle_msg_recv(
         }
         Msg::StartBreak => {
             println!("starting break");
+            tray.render_break_starting();
             ui::start_break(config, sender);
         }
         Msg::TimeRemainingBeforeBreak(remaining_time) => {

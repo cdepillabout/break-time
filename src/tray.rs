@@ -127,6 +127,13 @@ impl Tray {
         }
     }
 
+    pub fn render_break_starting(&self) {
+        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = self.pixbuf.to_glib_none().0;
+        unsafe {
+            gtk_sys::gtk_status_icon_set_from_pixbuf(self.status_icon, pixbuf_sys);
+        }
+    }
+
     pub fn render_time_remaining_before_break(&self, remaining_time: Duration) {
         // println!("Called render time remaining before break, remaining_time: {:?}...", remaining_time);
         let img: &mut &[u8] = &mut IMG.clone();
