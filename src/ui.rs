@@ -7,7 +7,7 @@ mod state;
 use glib::clone;
 use glib::source::Continue;
 use gtk::Inhibit;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use crate::config::Config;
 use super::Msg;
@@ -117,36 +117,35 @@ fn connect_events(config: &Config, state: &State) {
         );
     }
 
+    // the full time we want to wait for
+    let full_time = Duration::new(config.settings.break_duration_seconds.into(), 0);
+
     gtk::timeout_add(
         200,
-        clone!(@strong state, @strong config => move || {
-
-            let now = Instant::now();
-            let time_diff = now.saturating_duration_since(state.start_instant);
-
-            // the full time we want to wait for
-            let full_time = Duration::new(config.settings.break_duration_seconds.into(), 0);
-
-            let option_time_remaining = full_time.checked_sub(time_diff);
-
-            match option_time_remaining {
-                None => {
-                    end_break(&state);
-                    Continue(false)
-                }
-                Some(time_remaining) => {
-                    for label in state.get_time_remaining_labels() {
-                        let total_secs_remaining = time_remaining.as_secs();
-                        let mins: u64 = total_secs_remaining / 60;
-                        let secs: u64 = total_secs_remaining % 60;
-                        label.set_text(&format!("{:02}:{:02}", mins, secs));
-                    }
-                    Continue(true)
-                }
-            }
-
-        }),
+        clone!(@strong state => move || update_time_remaining(&state, full_time))
     );
+}
+
+fn update_time_remaining(state: &State, full_time: Duration) -> Continue {
+    let system_time_now = SystemTime::now();
+    let option_system_time_diff = system_time_now.duration_since(state.start_time).ok();
+    let option_system_time_remaining = option_system_time_diff.and_then(|system_time_diff| full_time.checked_sub(system_time_diff));
+
+    match option_system_time_remaining {
+        None => {
+            end_break(&state);
+            Continue(false)
+        }
+        Some(system_time_remaining) => {
+            for label in state.get_time_remaining_labels() {
+                let total_secs_remaining = system_time_remaining.as_secs();
+                let mins: u64 = total_secs_remaining / 60;
+                let secs: u64 = total_secs_remaining % 60;
+                label.set_text(&format!("{:02}:{:02}", mins, secs));
+            }
+            Continue(true)
+        }
+    }
 }
 
 fn redisplay(state: &State) {

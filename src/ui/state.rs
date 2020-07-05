@@ -1,7 +1,7 @@
 use super::builder;
 use super::prelude::*;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
 use crate::Msg;
 use crate::config::Config;
@@ -63,7 +63,7 @@ pub struct State {
     pub monitors: Vec<Monitor>,
     pub sender: glib::Sender<Message>,
     pub presses_remaining: Arc<RwLock<u32>>,
-    pub start_instant: Instant,
+    pub start_time: SystemTime,
     pub app_sender: glib::Sender<Msg>,
 }
 
@@ -85,7 +85,7 @@ impl State {
             monitors,
             sender,
             presses_remaining: Arc::new(RwLock::new(config.settings.clicks_to_end_break_early)),
-            start_instant: Instant::now(),
+            start_time: SystemTime::now(),
             app_sender,
         }
     }
