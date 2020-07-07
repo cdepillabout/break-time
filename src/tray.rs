@@ -128,6 +128,10 @@ impl Tray {
     }
 
     pub fn render_break_starting(&self) {
+        self.render_normal_icon()
+    }
+
+    pub fn render_normal_icon(&self) {
         let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = self.pixbuf.to_glib_none().0;
         unsafe {
             gtk_sys::gtk_status_icon_set_from_pixbuf(self.status_icon, pixbuf_sys);

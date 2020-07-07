@@ -153,6 +153,7 @@ impl Scheduler {
     }
 
     fn send_msgs_while_waiting(&self) {
+        self.sender.send(super::Msg::ResetSysTrayIcon);
         let mut remaining_time = self.time_until_break;
         for &period in PERIODS_TO_SEND_TIME_LEFT_MESSAGE.iter() {
             let opt_time_to_sleep = remaining_time.checked_sub(period);

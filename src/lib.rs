@@ -21,6 +21,7 @@ use tray::Tray;
 pub enum Msg {
     EndBreak,
     Quit,
+    ResetSysTrayIcon,
     TimeRemainingBeforeBreak(Duration),
     StartBreak,
 }
@@ -44,6 +45,9 @@ fn handle_msg_recv(
             println!("starting break");
             tray.render_break_starting();
             ui::start_break(config, sender);
+        }
+        Msg::ResetSysTrayIcon => {
+            tray.render_normal_icon();
         }
         Msg::TimeRemainingBeforeBreak(remaining_time) => {
             tray.render_time_remaining_before_break(remaining_time);
