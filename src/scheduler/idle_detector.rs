@@ -1,6 +1,8 @@
 use std::sync::mpsc::Sender;
 use std::time::Duration;
 
+use crate::config::Config;
+
 pub struct IdleDetector {
     conn: xcb::Connection,
     root_window: xcb::Window,
@@ -22,8 +24,9 @@ impl IdleDetector {
         }
     }
 
-    pub fn run(restart_wait_time_sender: Sender<()>) -> ! {
+    pub fn run(config: &Config, restart_wait_time_sender: Sender<()>) -> ! {
         let idle_detector = Self::new(restart_wait_time_sender);
+        let idle_detection_milliseconds = config.settings.idle_detection_seconds * 1000;
         loop {
             std::thread::sleep(Duration::from_secs(20));
 
@@ -31,13 +34,18 @@ impl IdleDetector {
                 .get_reply()
                 .unwrap();
 
+            let ms_since_user_input = idle_query_res.ms_since_user_input();
+
             println!(
                 "state: {}, ms_since_user_input: {}, kind: {}",
                 idle_query_res.state(),
-                idle_query_res.ms_since_user_input(),
+                ms_since_user_input,
                 idle_query_res.kind()
             );
 
+            if ms_since_user_input >= idle_detection_milliseconds {
+                idle_detector.restart_wait_time_sender.send(());
+            }
         }
     }
 }

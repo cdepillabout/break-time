@@ -101,8 +101,9 @@ impl Scheduler {
             println!("Scheduler initialized plugins");
             sched.run_loop();
         });
+        let config_clone = config.clone();
         std::thread::spawn(move || {
-            IdleDetector::run(restart_wait_time_sender);
+            IdleDetector::run(&config_clone, restart_wait_time_sender);
         });
         sched_break_ending_sender
     }
@@ -136,7 +137,7 @@ impl Scheduler {
             match waiting_result {
                 WaitingResult::Finished => {
                     println!(
-                        "Scheduler finished sleeping, checking if it can break now..."
+                        "Scheduler successfully finished sleeping, checking if it can break now..."
                     );
                     let (opt_can_break, errs) = self.plugins.can_break_now();
                     if errs.is_empty() {
@@ -162,6 +163,9 @@ impl Scheduler {
                 }
                 WaitingResult::NeedToRestart => {
                     // Just let this loop restart.
+                    println!(
+                        "Scheduler got a message to restart sleeping again, probably because X has been idle..."
+                    );
                 }
             }
         }
