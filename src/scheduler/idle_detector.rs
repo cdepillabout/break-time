@@ -1,3 +1,21 @@
+
+// This module defines an IdleDetector. It sends a message over a channel whenever it notices that
+// the X Server has been idle for a certain amount of time.
+//
+// This is used to reset the break timer whenever the user has stepped away from the computer.
+//
+// This currently uses a simple loop while querying the screensaver info, but really we should be
+// using a callback-based approach while listening to the XServer's XSync IDLETIME counter.  Here
+// are a few examples of using this:
+//
+// - https://chromium.googlesource.com/chromiumos/platform/power_manager/+/refs/heads/0.12.433.B62/xidle.h
+// - https://chromium.googlesource.com/chromiumos/platform/power_manager/+/refs/heads/0.12.433.B62/xidle.cc
+// - https://chromium.googlesource.com/chromiumos/platform/power_manager/+/refs/heads/tx/xidle-example.cc
+// - https://chromium.googlesource.com/chromiumos/platform/power_manager/+/refs/heads/0.12.433.B62/xidle_monitor.h
+// - https://www.x.org/releases/X11R7.7/doc/xextproto/sync.html
+// - https://github.com/freedesktop/xorg-xserver/blob/7f962c70b6d9c346477f23f6c15211e749110078/Xext/sync.c
+
+
 use std::sync::mpsc::Sender;
 use std::time::Duration;
 
