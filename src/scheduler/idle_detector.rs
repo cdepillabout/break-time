@@ -17,9 +17,12 @@
 
 
 use std::sync::mpsc::Sender;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use crate::config::Config;
+
+const SLEEP_SECONDS: u64 = 20;
+const SLEEP_MILLISECONDS: u128 = (SLEEP_SECONDS as u128) * 1000;
 
 pub struct IdleDetector {
     conn: xcb::Connection,
@@ -46,7 +49,20 @@ impl IdleDetector {
         let idle_detector = Self::new(restart_wait_time_sender);
         let idle_detection_milliseconds = config.settings.idle_detection_seconds * 1000;
         loop {
-            std::thread::sleep(Duration::from_secs(20));
+            let time_before_sleep = SystemTime::now();
+
+            let sleep_time_duration = Duration::from_secs(SLEEP_SECONDS);
+            std::thread::sleep(sleep_time_duration);
+
+            // Calculate the actual amount of time that has passed during sleep.
+            // This will potentially be different from the sleep time because the computer could be
+            // suspended during the above std::thread::sleep().
+            let time_difference_milliseconds: u128 = time_before_sleep.elapsed().unwrap_or(sleep_time_duration).as_millis();
+
+            // We subtract out the sleep time to get just the amount that the computer would have
+            // been suspended for.  If the computer wasn't actually suspended, then this should be
+            // very close to 0.
+            let suspend_milliseconds: u128 = time_difference_milliseconds - SLEEP_MILLISECONDS;
 
             let idle_query_res = xcb::screensaver::query_info(&idle_detector.conn, idle_detector.root_window)
                 .get_reply()
@@ -55,15 +71,34 @@ impl IdleDetector {
             let ms_since_user_input = idle_query_res.ms_since_user_input();
 
             println!(
-                "state: {}, ms_since_user_input: {}, kind: {}",
-                idle_query_res.state(),
+                "ms_since_user_input: {}, suspend_milliseconds: {}",
                 ms_since_user_input,
-                idle_query_res.kind()
+                suspend_milliseconds,
             );
 
-            if ms_since_user_input >= idle_detection_milliseconds {
+            if has_been_idle(idle_detection_milliseconds.into(), ms_since_user_input.into(), suspend_milliseconds) {
                 idle_detector.restart_wait_time_sender.send(());
             }
         }
+    }
+}
+
+fn has_been_idle(idle_detection_milliseconds: u128, milliseconds_since_user_input: u128, suspend_milliseconds: u128) -> bool {
+    (milliseconds_since_user_input + suspend_milliseconds) >= idle_detection_milliseconds
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_has_been_idle() {
+        // This is a test where has_been_idle() should return true if the computer has been idle
+        // for at least 20 seconds.  We've detected that there was been no user input in X for 10
+        // seconds, and the computer has been asleep for 15 seconds, which adds up to 25 seconds
+        // total.
+        let res = has_been_idle(20000, 10000, 15000);
+
+        assert_eq!(res, true);
     }
 }
