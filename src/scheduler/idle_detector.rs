@@ -20,6 +20,7 @@ use std::sync::mpsc::Sender;
 use std::time::{Duration, SystemTime};
 
 use crate::config::Config;
+use super::InnerMsg;
 
 const SLEEP_SECONDS: u64 = 20;
 const SLEEP_MILLISECONDS: u128 = (SLEEP_SECONDS as u128) * 1000;
@@ -27,11 +28,11 @@ const SLEEP_MILLISECONDS: u128 = (SLEEP_SECONDS as u128) * 1000;
 pub struct IdleDetector {
     conn: xcb::Connection,
     root_window: xcb::Window,
-    restart_wait_time_sender: Sender<()>,
+    restart_wait_time_sender: Sender<InnerMsg>,
 }
 
 impl IdleDetector {
-    pub fn new(restart_wait_time_sender: Sender<()>) -> Self {
+    pub fn new(restart_wait_time_sender: Sender<InnerMsg>) -> Self {
         let (conn, screen_num) = xcb::Connection::connect(None).unwrap();
         let setup: xcb::Setup = conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
@@ -45,7 +46,7 @@ impl IdleDetector {
         }
     }
 
-    pub fn run(config: &Config, restart_wait_time_sender: Sender<()>) -> ! {
+    pub fn run(config: &Config, restart_wait_time_sender: Sender<InnerMsg>) -> ! {
         let idle_detector = Self::new(restart_wait_time_sender);
         let idle_detection_milliseconds = config.settings.idle_detection_seconds * 1000;
         loop {
@@ -77,7 +78,7 @@ impl IdleDetector {
             );
 
             if has_been_idle(idle_detection_milliseconds.into(), ms_since_user_input.into(), suspend_milliseconds) {
-                idle_detector.restart_wait_time_sender.send(());
+                idle_detector.restart_wait_time_sender.send(InnerMsg::HasBeenIdle);
             }
         }
     }

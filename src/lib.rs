@@ -23,6 +23,7 @@ pub enum Msg {
     Pause,
     Quit,
     ResetSysTrayIcon,
+    Resume,
     StartBreak,
     TimeRemainingBeforeBreak(Duration),
 }
@@ -30,17 +31,19 @@ pub enum Msg {
 fn handle_msg_recv(
     config: &Config,
     sender: glib::Sender<Msg>,
-    scheduler_sender: Sender<scheduler::Msg>,
+    scheduler_outer_sender: Sender<scheduler::Msg>,
+    scheduler_inner_sender: Sender<scheduler::InnerMsg>,
     tray: &Tray,
     msg: Msg,
 ) {
     match msg {
         Msg::EndBreak => {
             println!("break ended");
-            scheduler_sender.send(scheduler::Msg::Start);
+            scheduler_outer_sender.send(scheduler::Msg::Start);
         }
         Msg::Pause => {
             tray.render_pause_icon();
+            scheduler_inner_sender.send(scheduler::InnerMsg::Pause);
         }
         Msg::Quit => {
             gtk::main_quit();
@@ -52,6 +55,10 @@ fn handle_msg_recv(
         }
         Msg::ResetSysTrayIcon => {
             tray.render_normal_icon();
+        }
+        Msg::Resume => {
+            tray.render_normal_icon();
+            scheduler_outer_sender.send(scheduler::Msg::Start);
         }
         Msg::TimeRemainingBeforeBreak(remaining_time) => {
             tray.render_time_remaining_before_break(remaining_time);
@@ -74,10 +81,10 @@ pub fn default_main() {
     let tray = tray::Tray::run(sender.clone());
 
     println!("Starting the scheduler...");
-    let scheduler_sender = Scheduler::run(&config, sender.clone());
+    let (scheduler_outer_sender, scheduler_inner_sender) = Scheduler::run(&config, sender.clone());
 
     receiver.attach(None, move |msg| {
-        handle_msg_recv(&config, sender.clone(), scheduler_sender.clone(), &tray, msg);
+        handle_msg_recv(&config, sender.clone(), scheduler_outer_sender.clone(), scheduler_inner_sender.clone(), &tray, msg);
         glib::source::Continue(true)
     });
 

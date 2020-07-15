@@ -1,3 +1,5 @@
+// This code is pretty horrible.  I am sorry.
+
 mod idle_detector;
 mod plugins;
 
@@ -66,6 +68,7 @@ impl std::ops::Deref for Plugins {
 
 enum State {
     CountDownToBreak,
+    Paused,
     WaitingForBreakEnd,
 }
 
@@ -74,12 +77,17 @@ pub struct Scheduler {
     plugins: Plugins,
     time_until_break: Duration,
     break_ending_receiver: Receiver<Msg>,
-    restart_wait_time_receiver: Receiver<()>,
+    restart_wait_time_receiver: Receiver<InnerMsg>,
     state: State,
 }
 
+enum WaitUntilBreakResult {
+    FinishedWaiting,
+    Paused,
+}
+
 impl Scheduler {
-    pub fn new(config: &Config, sender: glib::Sender<super::Msg>, break_ending_receiver: Receiver<Msg>, restart_wait_time_receiver: Receiver<()>) -> Result<Self, ()> {
+    pub fn new(config: &Config, sender: glib::Sender<super::Msg>, break_ending_receiver: Receiver<Msg>, restart_wait_time_receiver: Receiver<InnerMsg>) -> Result<Self, ()> {
         Ok(Scheduler {
             sender,
             plugins: Plugins::new(config)?,
@@ -90,7 +98,7 @@ impl Scheduler {
         })
     }
 
-    pub fn run(config: &Config, sender: glib::Sender<super::Msg>) -> Sender<Msg> {
+    pub fn run(config: &Config, sender: glib::Sender<super::Msg>) -> (Sender<Msg>, Sender<InnerMsg>) {
         let (sched_break_ending_sender, sched_break_ending_receiver) = channel();
         let (restart_wait_time_sender, restart_wait_time_receiver) = channel();
         let config_clone = config.clone();
@@ -102,21 +110,30 @@ impl Scheduler {
             sched.run_loop();
         });
         let config_clone = config.clone();
+        let restart_wait_time_sender_clone = restart_wait_time_sender.clone();
         std::thread::spawn(move || {
-            IdleDetector::run(&config_clone, restart_wait_time_sender);
+            IdleDetector::run(&config_clone, restart_wait_time_sender_clone);
         });
-        sched_break_ending_sender
+        (sched_break_ending_sender, restart_wait_time_sender)
     }
 
     fn run_loop(&mut self) -> ! {
       loop {
           match self.state {
               State::CountDownToBreak => {
-                  self.wait_until_break();
-                  self.state = State::WaitingForBreakEnd;
+                  let wait_until_break_result = self.wait_until_break();
+                  match wait_until_break_result {
+                      WaitUntilBreakResult::FinishedWaiting => {
+                        self.state = State::WaitingForBreakEnd;
+                      }
+                      WaitUntilBreakResult::Paused => {
+                        self.state = State::Paused;
+                      }
+                  }
               }
-              State::WaitingForBreakEnd => {
-                  // Wait for a message signalling a break ending.
+              State::Paused | State::WaitingForBreakEnd => {
+                  // Wait for a message signalling a break ending or a pause ending.
+                  println!("Scheduler currently waiting for a message signaling either a break or a pause ending.");
                   let msg = self.break_ending_receiver
                       .recv()
                       .expect("Error receiving value in Scheduler.");
@@ -131,7 +148,7 @@ impl Scheduler {
       }
     }
 
-    fn wait_until_break(&self) {
+    fn wait_until_break(&self) -> WaitUntilBreakResult {
         loop {
             let waiting_result = self.send_msgs_while_waiting();
             match waiting_result {
@@ -147,7 +164,7 @@ impl Scheduler {
                                 if can_break.into_bool() {
                                     println!("Scheduler realized it was able to break, so sending a message.");
                                     self.sender.send(super::Msg::StartBreak);
-                                    break;
+                                    return WaitUntilBreakResult::FinishedWaiting;
                                 } else {
                                     println!("Could not break right now, so sleeping again...");
                                 }
@@ -167,6 +184,9 @@ impl Scheduler {
                         "Scheduler got a message to restart sleeping again, probably because X has been idle..."
                     );
                 }
+                WaitingResult::Paused => {
+                    return WaitUntilBreakResult::Paused;
+                }
             }
         }
     }
@@ -185,9 +205,13 @@ impl Scheduler {
                 Some(time_to_sleep) => {
                     let res = self.restart_wait_time_receiver.recv_timeout(time_to_sleep);
                     match res {
-                        Ok(()) => {
+                        Ok(InnerMsg::HasBeenIdle) => {
                             println!("HERERERERE");
                             return WaitingResult::NeedToRestart;
+                        }
+                        Ok(InnerMsg::Pause) => {
+                            println!("Got inner message to pause...");
+                            return WaitingResult::Paused;
                         }
                         Err(_) => {
                             self.sender.send(super::Msg::TimeRemainingBeforeBreak(period));
@@ -203,8 +227,14 @@ impl Scheduler {
 }
 
 enum WaitingResult {
-    NeedToRestart,
     Finished,
+    NeedToRestart,
+    Paused,
+}
+
+pub enum InnerMsg {
+    Pause,
+    HasBeenIdle,
 }
 
 const PERIODS_TO_SEND_TIME_LEFT_MESSAGE: [Duration; 65] = [
