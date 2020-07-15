@@ -7,6 +7,7 @@ use crate::prelude::*;
 use crate::Msg;
 
 static IMG: &'static [u8] = include_bytes!("../imgs/clock.png");
+static IMG_STOPPED: &'static [u8] = include_bytes!("../imgs/clock-stopped.png");
 // static IMG2: &'static [u8] = include_bytes!("../imgs/clock-2.png");
 
 fn connect_activate<F>(
@@ -83,22 +84,30 @@ where
 pub struct Tray {
     status_icon: *mut gtk_sys::GtkStatusIcon,
     pixbuf: gdk_pixbuf::Pixbuf,
+    pixbuf_stopped: gdk_pixbuf::Pixbuf,
     sender: glib::Sender<Msg>,
+}
+
+fn load_pixbuf(image_bytes: &[u8]) -> gdk_pixbuf::Pixbuf {
+    let pixbuf_loader = gdk_pixbuf::PixbufLoader::new();
+    pixbuf_loader
+        .write(image_bytes)
+        .expect("could not write image to pixbufloader");
+    let pixbuf = pixbuf_loader
+        .get_pixbuf()
+        .expect("could not get a pixbuf from the loaded image");
+    pixbuf_loader
+        .close()
+        .expect("could not close pixbuf loader");
+
+    pixbuf
 }
 
 impl Tray {
     pub fn new(sender: glib::Sender<Msg>) -> Self {
 
-        let pixbuf_loader = gdk_pixbuf::PixbufLoader::new();
-        pixbuf_loader
-            .write(IMG)
-            .expect("could not write image to pixbufloader");
-        let pixbuf = pixbuf_loader
-            .get_pixbuf()
-            .expect("could not get a pixbuf from the loaded image");
-        pixbuf_loader
-            .close()
-            .expect("could not close pixbuf loader");
+        let pixbuf = load_pixbuf(IMG);
+        let pixbuf_stopped = load_pixbuf(IMG_STOPPED);
 
         let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = pixbuf.to_glib_none().0;
         let status_icon: *mut gtk_sys::GtkStatusIcon;
@@ -111,11 +120,18 @@ impl Tray {
             gtk_sys::gtk_status_icon_set_visible(status_icon, 1);
         }
 
+        let tray = 
+
         Tray {
             status_icon,
             pixbuf,
+            pixbuf_stopped,
             sender,
-        }
+        };
+
+        tray.render_normal_icon();
+
+        tray
     }
 
     pub fn set_tooltip_text(&self, tooltip_text: &str) {
@@ -129,6 +145,13 @@ impl Tray {
 
     pub fn render_break_starting(&self) {
         self.render_normal_icon()
+    }
+
+    pub fn render_pause_icon(&self) {
+        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = self.pixbuf_stopped.to_glib_none().0;
+        unsafe {
+            gtk_sys::gtk_status_icon_set_from_pixbuf(self.status_icon, pixbuf_sys);
+        }
     }
 
     pub fn render_normal_icon(&self) {
@@ -196,10 +219,17 @@ impl Tray {
                 button,
                 activate_time| {
                 let menu = gtk::Menu::new();
+
+                let pause_item = gtk::MenuItem::new_with_label("Pause");
+                let sender_clone = sender.clone();
+                pause_item.connect_activate(move |_| sender_clone.send(Msg::Pause).expect("Could not send Msg::Pause"));
+                menu.append(&pause_item);
+
                 let quit_item = gtk::MenuItem::new_with_label("Quit");
                 let sender_clone = sender.clone();
                 quit_item.connect_activate(move |_| sender_clone.send(Msg::Quit).expect("Could not send Msg::Quit"));
                 menu.append(&quit_item);
+
                 menu.show_all();
                 menu.popup_easy(button, activate_time);
             },

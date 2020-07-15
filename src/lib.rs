@@ -20,10 +20,11 @@ use tray::Tray;
 
 pub enum Msg {
     EndBreak,
+    Pause,
     Quit,
     ResetSysTrayIcon,
-    TimeRemainingBeforeBreak(Duration),
     StartBreak,
+    TimeRemainingBeforeBreak(Duration),
 }
 
 fn handle_msg_recv(
@@ -37,6 +38,9 @@ fn handle_msg_recv(
         Msg::EndBreak => {
             println!("break ended");
             scheduler_sender.send(scheduler::Msg::Start);
+        }
+        Msg::Pause => {
+            tray.render_pause_icon();
         }
         Msg::Quit => {
             gtk::main_quit();
