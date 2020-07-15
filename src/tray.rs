@@ -80,7 +80,6 @@ where
     }
 }
 
-
 pub struct Tray {
     status_icon: *mut gtk_sys::GtkStatusIcon,
     pixbuf: gdk_pixbuf::Pixbuf,
@@ -105,11 +104,11 @@ fn load_pixbuf(image_bytes: &[u8]) -> gdk_pixbuf::Pixbuf {
 
 impl Tray {
     pub fn new(sender: glib::Sender<Msg>) -> Self {
-
         let pixbuf = load_pixbuf(IMG);
         let pixbuf_stopped = load_pixbuf(IMG_STOPPED);
 
-        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = pixbuf.to_glib_none().0;
+        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf =
+            pixbuf.to_glib_none().0;
         let status_icon: *mut gtk_sys::GtkStatusIcon;
 
         unsafe {
@@ -120,9 +119,7 @@ impl Tray {
             gtk_sys::gtk_status_icon_set_visible(status_icon, 1);
         }
 
-        let tray = 
-
-        Tray {
+        let tray = Tray {
             status_icon,
             pixbuf,
             pixbuf_stopped,
@@ -148,16 +145,21 @@ impl Tray {
     }
 
     pub fn render_pause_icon(&self) {
-        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = self.pixbuf_stopped.to_glib_none().0;
-        unsafe {
-            gtk_sys::gtk_status_icon_set_from_pixbuf(self.status_icon, pixbuf_sys);
-        }
+        self.render_pixbuf(&self.pixbuf_stopped);
     }
 
     pub fn render_normal_icon(&self) {
-        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf = self.pixbuf.to_glib_none().0;
+        self.render_pixbuf(&self.pixbuf);
+    }
+
+    pub fn render_pixbuf(&self, pixbuf: &gdk_pixbuf::Pixbuf) {
+        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf =
+            pixbuf.to_glib_none().0;
         unsafe {
-            gtk_sys::gtk_status_icon_set_from_pixbuf(self.status_icon, pixbuf_sys);
+            gtk_sys::gtk_status_icon_set_from_pixbuf(
+                self.status_icon,
+                pixbuf_sys,
+            );
         }
     }
 
@@ -189,12 +191,9 @@ impl Tray {
         cr.show_text(&remaining_time_text);
 
         let new_pixbuf =
-            gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000);
-        let new_pixbuf_sys = new_pixbuf.to_glib_none().0;
-
-        unsafe {
-            gtk_sys::gtk_status_icon_set_from_pixbuf(self.status_icon, new_pixbuf_sys);
-        }
+            gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000)
+                .expect("Should always return surface.");
+        self.render_pixbuf(&new_pixbuf);
     }
 
     pub fn run(sender: glib::Sender<Msg>) -> Self {
@@ -204,9 +203,6 @@ impl Tray {
         connect_activate(
             tray.status_icon,
             move |_status_icon: *mut gtk_sys::GtkStatusIcon| {
-                // unsafe {
-                //     gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, whatwhat);
-                // }
                 println!("clicked!!!");
             },
         );
@@ -216,18 +212,26 @@ impl Tray {
         connect_popup_menu(
             tray.status_icon,
             move |_status_icon: *mut gtk_sys::GtkStatusIcon,
-                button,
-                activate_time| {
+                  button,
+                  activate_time| {
                 let menu = gtk::Menu::new();
 
                 let pause_item = gtk::MenuItem::new_with_label("Pause");
                 let sender_clone = sender.clone();
-                pause_item.connect_activate(move |_| sender_clone.send(Msg::Pause).expect("Could not send Msg::Pause"));
+                pause_item.connect_activate(move |_| {
+                    sender_clone
+                        .send(Msg::Pause)
+                        .expect("Could not send Msg::Pause")
+                });
                 menu.append(&pause_item);
 
                 let quit_item = gtk::MenuItem::new_with_label("Quit");
                 let sender_clone = sender.clone();
-                quit_item.connect_activate(move |_| sender_clone.send(Msg::Quit).expect("Could not send Msg::Quit"));
+                quit_item.connect_activate(move |_| {
+                    sender_clone
+                        .send(Msg::Quit)
+                        .expect("Could not send Msg::Quit")
+                });
                 menu.append(&quit_item);
 
                 menu.show_all();
