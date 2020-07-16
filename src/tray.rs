@@ -298,7 +298,7 @@ impl Tray {
     }
 
     fn set_time_remaining_tool_tip(&self, remaining_time: Duration) {
-        self.set_tooltip_text(&format!("break-time: {} remaining until next break", remaining_duration_to_text(remaining_time)));
+        self.set_tooltip_text(&format!("break-time: {} until next break", remaining_duration_to_text(remaining_time)));
     }
 
     pub fn update_time_remaining(&self, remaining_time: Duration) {
