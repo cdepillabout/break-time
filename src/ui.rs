@@ -9,8 +9,8 @@ use glib::source::Continue;
 use gtk::Inhibit;
 use std::time::{Duration, Instant, SystemTime};
 
-use crate::config::Config;
 use super::Msg;
+use crate::config::Config;
 use prelude::*;
 use state::{Message, State};
 
@@ -37,7 +37,12 @@ fn handle_msg_recv(
             }
             state.notify_app_end();
 
-            focus_previous_window(x11, root_win, net_active_win_atom, option_old_active_win);
+            focus_previous_window(
+                x11,
+                root_win,
+                net_active_win_atom,
+                option_old_active_win,
+            );
 
             Continue(false)
         }
@@ -79,9 +84,7 @@ fn focus_previous_window(
 
         match res {
             Ok(()) => (),
-            Err(err) => {
-                println!("Could not focus old focused window: {}", err)
-            }
+            Err(err) => println!("Could not focus old focused window: {}", err),
         }
     }
 }
@@ -118,18 +121,21 @@ fn connect_events(config: &Config, state: &State) {
     }
 
     // the full time we want to wait for
-    let full_time = Duration::new(config.settings.break_duration_seconds.into(), 0);
+    let full_time =
+        Duration::new(config.settings.break_duration_seconds.into(), 0);
 
     gtk::timeout_add(
         200,
-        clone!(@strong state => move || update_time_remaining(&state, full_time))
+        clone!(@strong state => move || update_time_remaining(&state, full_time)),
     );
 }
 
 fn update_time_remaining(state: &State, full_time: Duration) -> Continue {
     let system_time_now = SystemTime::now();
-    let option_system_time_diff = system_time_now.duration_since(state.start_time).ok();
-    let option_system_time_remaining = option_system_time_diff.and_then(|system_time_diff| full_time.checked_sub(system_time_diff));
+    let option_system_time_diff =
+        system_time_now.duration_since(state.start_time).ok();
+    let option_system_time_remaining = option_system_time_diff
+        .and_then(|system_time_diff| full_time.checked_sub(system_time_diff));
 
     match option_system_time_remaining {
         None => {

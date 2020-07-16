@@ -3,12 +3,12 @@
 mod idle_detector;
 mod plugins;
 
-use idle_detector::IdleDetector;
-use plugins::{CanBreak, Plugin};
 use super::config::Config;
 use super::tray::Tray;
+use idle_detector::IdleDetector;
+use plugins::{CanBreak, Plugin};
 
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]
@@ -29,9 +29,14 @@ impl Plugins {
         Ok(Plugins(all_plugins))
     }
 
-    fn can_break_now(&self) -> (Option<CanBreak>, Vec<Box<dyn std::error::Error>>) {
+    fn can_break_now(
+        &self,
+    ) -> (Option<CanBreak>, Vec<Box<dyn std::error::Error>>) {
         fn f(
-            (opt_old_can_break, mut err_accum): (Option<CanBreak>, Vec<Box<dyn std::error::Error>>),
+            (opt_old_can_break, mut err_accum): (
+                Option<CanBreak>,
+                Vec<Box<dyn std::error::Error>>,
+            ),
             plugin: &Box<dyn Plugin>,
         ) -> (Option<CanBreak>, Vec<Box<dyn std::error::Error>>) {
             let res_can_break = plugin.can_break_now();
@@ -87,25 +92,41 @@ enum WaitUntilBreakResult {
 }
 
 impl Scheduler {
-    pub fn new(config: &Config, sender: glib::Sender<super::Msg>, break_ending_receiver: Receiver<Msg>, restart_wait_time_receiver: Receiver<InnerMsg>) -> Result<Self, ()> {
+    pub fn new(
+        config: &Config,
+        sender: glib::Sender<super::Msg>,
+        break_ending_receiver: Receiver<Msg>,
+        restart_wait_time_receiver: Receiver<InnerMsg>,
+    ) -> Result<Self, ()> {
         Ok(Scheduler {
             sender,
             plugins: Plugins::new(config)?,
-            time_until_break: Duration::from_secs(config.settings.seconds_between_breaks.into()),
+            time_until_break: Duration::from_secs(
+                config.settings.seconds_between_breaks.into(),
+            ),
             break_ending_receiver,
             restart_wait_time_receiver,
             state: State::CountDownToBreak,
         })
     }
 
-    pub fn run(config: &Config, sender: glib::Sender<super::Msg>) -> (Sender<Msg>, Sender<InnerMsg>) {
-        let (sched_break_ending_sender, sched_break_ending_receiver) = channel();
+    pub fn run(
+        config: &Config,
+        sender: glib::Sender<super::Msg>,
+    ) -> (Sender<Msg>, Sender<InnerMsg>) {
+        let (sched_break_ending_sender, sched_break_ending_receiver) =
+            channel();
         let (restart_wait_time_sender, restart_wait_time_receiver) = channel();
         let config_clone = config.clone();
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
-            let mut sched =
-                Scheduler::new(&config_clone, sender, sched_break_ending_receiver, restart_wait_time_receiver).expect("Could not initialize plugins.");
+            let mut sched = Scheduler::new(
+                &config_clone,
+                sender,
+                sched_break_ending_receiver,
+                restart_wait_time_receiver,
+            )
+            .expect("Could not initialize plugins.");
             println!("Scheduler initialized plugins");
             sched.run_loop();
         });
@@ -118,34 +139,35 @@ impl Scheduler {
     }
 
     fn run_loop(&mut self) -> ! {
-      loop {
-          match self.state {
-              State::CountDownToBreak => {
-                  let wait_until_break_result = self.wait_until_break();
-                  match wait_until_break_result {
-                      WaitUntilBreakResult::FinishedWaiting => {
-                        self.state = State::WaitingForBreakEnd;
-                      }
-                      WaitUntilBreakResult::Paused => {
-                        self.state = State::Paused;
-                      }
-                  }
-              }
-              State::Paused | State::WaitingForBreakEnd => {
-                  // Wait for a message signalling a break ending or a pause ending.
-                  println!("Scheduler currently waiting for a message signaling either a break or a pause ending.");
-                  let msg = self.break_ending_receiver
-                      .recv()
-                      .expect("Error receiving value in Scheduler.");
+        loop {
+            match self.state {
+                State::CountDownToBreak => {
+                    let wait_until_break_result = self.wait_until_break();
+                    match wait_until_break_result {
+                        WaitUntilBreakResult::FinishedWaiting => {
+                            self.state = State::WaitingForBreakEnd;
+                        }
+                        WaitUntilBreakResult::Paused => {
+                            self.state = State::Paused;
+                        }
+                    }
+                }
+                State::Paused | State::WaitingForBreakEnd => {
+                    // Wait for a message signalling a break ending or a pause ending.
+                    println!("Scheduler currently waiting for a message signaling either a break or a pause ending.");
+                    let msg = self
+                        .break_ending_receiver
+                        .recv()
+                        .expect("Error receiving value in Scheduler.");
 
-                  match msg {
-                      Msg::Start => {
-                          self.state = State::CountDownToBreak;
-                      }
-                  }
-              }
-          }
-      }
+                    match msg {
+                        Msg::Start => {
+                            self.state = State::CountDownToBreak;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fn wait_until_break(&self) -> WaitUntilBreakResult {
@@ -171,7 +193,9 @@ impl Scheduler {
                             }
                         }
                     } else {
-                        println!("There have been some errors from our plugins:");
+                        println!(
+                            "There have been some errors from our plugins:"
+                        );
                         for e in errs {
                             println!("{}", e);
                         }
@@ -203,7 +227,9 @@ impl Scheduler {
                     // the remaining time.  We can just skip this.
                 }
                 Some(time_to_sleep) => {
-                    let res = self.restart_wait_time_receiver.recv_timeout(time_to_sleep);
+                    let res = self
+                        .restart_wait_time_receiver
+                        .recv_timeout(time_to_sleep);
                     match res {
                         Ok(InnerMsg::HasBeenIdle) => {
                             println!("HERERERERE");
@@ -214,7 +240,9 @@ impl Scheduler {
                             return WaitingResult::Paused;
                         }
                         Err(_) => {
-                            self.sender.send(super::Msg::TimeRemainingBeforeBreak(period));
+                            self.sender.send(
+                                super::Msg::TimeRemainingBeforeBreak(period),
+                            );
                             remaining_time -= time_to_sleep;
                         }
                     }
@@ -236,6 +264,9 @@ pub enum InnerMsg {
     Pause,
     HasBeenIdle,
 }
+
+// fn create_periods_to_send_time_left_message() -> Vec<Duration> {
+// }
 
 const PERIODS_TO_SEND_TIME_LEFT_MESSAGE: [Duration; 65] = [
     Duration::from_secs(60 * 5),
@@ -303,4 +334,4 @@ const PERIODS_TO_SEND_TIME_LEFT_MESSAGE: [Duration; 65] = [
     Duration::from_secs(2),
     Duration::from_secs(1),
     Duration::from_secs(0),
-    ];
+];

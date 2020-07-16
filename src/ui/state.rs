@@ -3,8 +3,8 @@ use super::prelude::*;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 use std::time::{Instant, SystemTime};
 
-use crate::Msg;
 use crate::config::Config;
+use crate::Msg;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
@@ -84,7 +84,9 @@ impl State {
             builders,
             monitors,
             sender,
-            presses_remaining: Arc::new(RwLock::new(config.settings.clicks_to_end_break_early)),
+            presses_remaining: Arc::new(RwLock::new(
+                config.settings.clicks_to_end_break_early,
+            )),
             start_time: SystemTime::now(),
             app_sender,
         }

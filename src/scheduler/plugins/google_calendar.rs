@@ -39,12 +39,10 @@ pub struct CalFetcher {
 }
 
 impl CalFetcher {
-    pub fn new(
-        break_time_cache_dir: &Path,
-        email: String,
-    ) -> Result<Self, ()> {
+    pub fn new(break_time_cache_dir: &Path, email: String) -> Result<Self, ()> {
         let google_cal_dir_name = Path::new("google-calendar");
-        let google_cal_dir_path = break_time_cache_dir.join(google_cal_dir_name);
+        let google_cal_dir_path =
+            break_time_cache_dir.join(google_cal_dir_name);
 
         std::fs::create_dir_all(&google_cal_dir_path).map_err(|io_err| ())?;
 
@@ -329,12 +327,10 @@ fn has_event(
     // println!("\n\nevents for {}: {:?}", calendar_id, result);
 
     match result {
-        Err(err) => {
-            Err(GoogleCalErr::FetchingEvents {
-                calendar_id: String::from(calendar_id),
-                google_cal_err: err,
-            })
-        }
+        Err(err) => Err(GoogleCalErr::FetchingEvents {
+            calendar_id: String::from(calendar_id),
+            google_cal_err: err,
+        }),
         Ok((_, events)) => {
             match events.items {
                 None => Ok(HasEvent::No),

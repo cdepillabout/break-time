@@ -79,10 +79,18 @@ pub fn default_main() {
     let mut tray = tray::Tray::run(sender.clone());
 
     println!("Starting the scheduler...");
-    let (scheduler_outer_sender, scheduler_inner_sender) = Scheduler::run(&config, sender.clone());
+    let (scheduler_outer_sender, scheduler_inner_sender) =
+        Scheduler::run(&config, sender.clone());
 
     receiver.attach(None, move |msg| {
-        handle_msg_recv(&config, sender.clone(), scheduler_outer_sender.clone(), scheduler_inner_sender.clone(), &mut tray, msg);
+        handle_msg_recv(
+            &config,
+            sender.clone(),
+            scheduler_outer_sender.clone(),
+            scheduler_inner_sender.clone(),
+            &mut tray,
+            msg,
+        );
         glib::source::Continue(true)
     });
 

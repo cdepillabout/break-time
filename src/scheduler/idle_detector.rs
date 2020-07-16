@@ -1,4 +1,3 @@
-
 // This module defines an IdleDetector. It sends a message over a channel whenever it notices that
 // the X Server has been idle for a certain amount of time.
 //
@@ -15,12 +14,11 @@
 // - https://www.x.org/releases/X11R7.7/doc/xextproto/sync.html
 // - https://github.com/freedesktop/xorg-xserver/blob/7f962c70b6d9c346477f23f6c15211e749110078/Xext/sync.c
 
-
 use std::sync::mpsc::Sender;
 use std::time::{Duration, SystemTime};
 
-use crate::config::Config;
 use super::InnerMsg;
+use crate::config::Config;
 
 const SLEEP_SECONDS: u64 = 20;
 const SLEEP_MILLISECONDS: u128 = (SLEEP_SECONDS as u128) * 1000;
@@ -46,9 +44,13 @@ impl IdleDetector {
         }
     }
 
-    pub fn run(config: &Config, restart_wait_time_sender: Sender<InnerMsg>) -> ! {
+    pub fn run(
+        config: &Config,
+        restart_wait_time_sender: Sender<InnerMsg>,
+    ) -> ! {
         let idle_detector = Self::new(restart_wait_time_sender);
-        let idle_detection_milliseconds = config.settings.idle_detection_seconds * 1000;
+        let idle_detection_milliseconds =
+            config.settings.idle_detection_seconds * 1000;
         loop {
             let time_before_sleep = SystemTime::now();
 
@@ -58,16 +60,23 @@ impl IdleDetector {
             // Calculate the actual amount of time that has passed during sleep.
             // This will potentially be different from the sleep time because the computer could be
             // suspended during the above std::thread::sleep().
-            let time_difference_milliseconds: u128 = time_before_sleep.elapsed().unwrap_or(sleep_time_duration).as_millis();
+            let time_difference_milliseconds: u128 = time_before_sleep
+                .elapsed()
+                .unwrap_or(sleep_time_duration)
+                .as_millis();
 
             // We subtract out the sleep time to get just the amount that the computer would have
             // been suspended for.  If the computer wasn't actually suspended, then this should be
             // very close to 0.
-            let suspend_milliseconds: u128 = time_difference_milliseconds - SLEEP_MILLISECONDS;
+            let suspend_milliseconds: u128 =
+                time_difference_milliseconds - SLEEP_MILLISECONDS;
 
-            let idle_query_res = xcb::screensaver::query_info(&idle_detector.conn, idle_detector.root_window)
-                .get_reply()
-                .unwrap();
+            let idle_query_res = xcb::screensaver::query_info(
+                &idle_detector.conn,
+                idle_detector.root_window,
+            )
+            .get_reply()
+            .unwrap();
 
             let ms_since_user_input = idle_query_res.ms_since_user_input();
 
@@ -77,15 +86,26 @@ impl IdleDetector {
             //     suspend_milliseconds,
             // );
 
-            if has_been_idle(idle_detection_milliseconds.into(), ms_since_user_input.into(), suspend_milliseconds) {
-                idle_detector.restart_wait_time_sender.send(InnerMsg::HasBeenIdle);
+            if has_been_idle(
+                idle_detection_milliseconds.into(),
+                ms_since_user_input.into(),
+                suspend_milliseconds,
+            ) {
+                idle_detector
+                    .restart_wait_time_sender
+                    .send(InnerMsg::HasBeenIdle);
             }
         }
     }
 }
 
-fn has_been_idle(idle_detection_milliseconds: u128, milliseconds_since_user_input: u128, suspend_milliseconds: u128) -> bool {
-    (milliseconds_since_user_input + suspend_milliseconds) >= idle_detection_milliseconds
+fn has_been_idle(
+    idle_detection_milliseconds: u128,
+    milliseconds_since_user_input: u128,
+    suspend_milliseconds: u128,
+) -> bool {
+    (milliseconds_since_user_input + suspend_milliseconds)
+        >= idle_detection_milliseconds
 }
 
 #[cfg(test)]

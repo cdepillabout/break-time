@@ -80,7 +80,10 @@ where
     }
 }
 
-pub fn signal_handler_disconnect(status_icon: *mut gtk_sys::GtkStatusIcon, handler_id: &glib::signal::SignalHandlerId) {
+pub fn signal_handler_disconnect(
+    status_icon: *mut gtk_sys::GtkStatusIcon,
+    handler_id: &glib::signal::SignalHandlerId,
+) {
     unsafe {
         gobject_sys::g_signal_handler_disconnect(
             status_icon as *mut gobject_sys::GObject,
@@ -240,8 +243,10 @@ impl Tray {
     }
 
     fn conn_popup_menu(&mut self, is_paused: IsPaused) {
-        if let Some(prev_signal_handler_id) = &self.menu_right_click_signal_handler_id {
-             signal_handler_disconnect(self.status_icon, prev_signal_handler_id);
+        if let Some(prev_signal_handler_id) =
+            &self.menu_right_click_signal_handler_id
+        {
+            signal_handler_disconnect(self.status_icon, prev_signal_handler_id);
         }
 
         let sender = self.sender.clone();
@@ -264,7 +269,8 @@ impl Tray {
                         menu.append(&pause_item);
                     }
                     IsPaused::Yes => {
-                        let resume_item = gtk::MenuItem::new_with_label("Resume");
+                        let resume_item =
+                            gtk::MenuItem::new_with_label("Resume");
                         let sender_clone = sender.clone();
                         resume_item.connect_activate(move |_| {
                             sender_clone

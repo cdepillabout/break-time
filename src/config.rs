@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use indoc::indoc;
 use serde::{Deserialize, Serialize};
 
-use crate::opts::{Opts};
+use crate::opts::Opts;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(transparent)]
@@ -114,32 +114,30 @@ impl Config {
     // TODO: Change some of the panics in this function to returning errors.
     pub fn load(opts: Opts) -> Result<Self, ()> {
         let config_file_name = "config.toml";
-        let config_file_path =
-            match opts.conf_dir {
-                Some(conf_dir) => {
-                    std::fs::create_dir_all(&conf_dir).map_err(|io_err| ())?;
-                    conf_dir.join(config_file_name)
-                }
-                None => {
-                    let xdg_base_dir =
-                        xdg::BaseDirectories::with_prefix("break-time")
-                            .map_err(|xdg_base_dir_err| ())?;
-                    xdg_base_dir
-                        .place_config_file(config_file_name)
-                        .map_err(|io_err| ())?
-                }
-            };
+        let config_file_path = match opts.conf_dir {
+            Some(conf_dir) => {
+                std::fs::create_dir_all(&conf_dir).map_err(|io_err| ())?;
+                conf_dir.join(config_file_name)
+            }
+            None => {
+                let xdg_base_dir =
+                    xdg::BaseDirectories::with_prefix("break-time")
+                        .map_err(|xdg_base_dir_err| ())?;
+                xdg_base_dir
+                    .place_config_file(config_file_name)
+                    .map_err(|io_err| ())?
+            }
+        };
 
-        let cache_dir =
-            match opts.cache_dir {
-                Some(cache_dir) => cache_dir,
-                None => {
-                    let xdg_base_dir =
-                        xdg::BaseDirectories::with_prefix("break-time")
-                            .map_err(|xdg_base_dir_err| ())?;
-                    xdg_base_dir.get_cache_home()
-                }
-            };
+        let cache_dir = match opts.cache_dir {
+            Some(cache_dir) => cache_dir,
+            None => {
+                let xdg_base_dir =
+                    xdg::BaseDirectories::with_prefix("break-time")
+                        .map_err(|xdg_base_dir_err| ())?;
+                xdg_base_dir.get_cache_home()
+            }
+        };
         std::fs::create_dir_all(&cache_dir).map_err(|io_err| ())?;
 
         // Try reading the config file to see whether it exists or not.
