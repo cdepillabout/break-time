@@ -33,7 +33,7 @@ fn handle_msg_recv(
     sender: glib::Sender<Msg>,
     scheduler_outer_sender: Sender<scheduler::Msg>,
     scheduler_inner_sender: Sender<scheduler::InnerMsg>,
-    tray: &Tray,
+    tray: &mut Tray,
     msg: Msg,
 ) {
     match msg {
@@ -42,7 +42,7 @@ fn handle_msg_recv(
             scheduler_outer_sender.send(scheduler::Msg::Start);
         }
         Msg::Pause => {
-            tray.render_pause_icon();
+            tray.pause();
             scheduler_inner_sender.send(scheduler::InnerMsg::Pause);
         }
         Msg::Quit => {
@@ -57,7 +57,7 @@ fn handle_msg_recv(
             tray.render_normal_icon();
         }
         Msg::Resume => {
-            tray.render_normal_icon();
+            tray.resume();
             scheduler_outer_sender.send(scheduler::Msg::Start);
         }
         Msg::TimeRemainingBeforeBreak(remaining_time) => {
@@ -78,13 +78,13 @@ pub fn default_main() {
 
     // TODO: pass the tray to the scheduler so the scheduler can determine when to start counting
     // down on the tray...
-    let tray = tray::Tray::run(sender.clone());
+    let mut tray = tray::Tray::run(sender.clone());
 
     println!("Starting the scheduler...");
     let (scheduler_outer_sender, scheduler_inner_sender) = Scheduler::run(&config, sender.clone());
 
     receiver.attach(None, move |msg| {
-        handle_msg_recv(&config, sender.clone(), scheduler_outer_sender.clone(), scheduler_inner_sender.clone(), &tray, msg);
+        handle_msg_recv(&config, sender.clone(), scheduler_outer_sender.clone(), scheduler_inner_sender.clone(), &mut tray, msg);
         glib::source::Continue(true)
     });
 

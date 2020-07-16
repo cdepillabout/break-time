@@ -80,11 +80,21 @@ where
     }
 }
 
+pub fn signal_handler_disconnect(status_icon: *mut gtk_sys::GtkStatusIcon, handler_id: &glib::signal::SignalHandlerId) {
+    unsafe {
+        gobject_sys::g_signal_handler_disconnect(
+            status_icon as *mut gobject_sys::GObject,
+            handler_id.to_glib(),
+        );
+    }
+}
+
 pub struct Tray {
     status_icon: *mut gtk_sys::GtkStatusIcon,
     pixbuf: gdk_pixbuf::Pixbuf,
     pixbuf_stopped: gdk_pixbuf::Pixbuf,
     sender: glib::Sender<Msg>,
+    menu_right_click_signal_handler_id: Option<glib::signal::SignalHandlerId>,
 }
 
 fn load_pixbuf(image_bytes: &[u8]) -> gdk_pixbuf::Pixbuf {
@@ -119,11 +129,14 @@ impl Tray {
             gtk_sys::gtk_status_icon_set_visible(status_icon, 1);
         }
 
+        let menu_right_click_signal_handler_id = None;
+
         let tray = Tray {
             status_icon,
             pixbuf,
             pixbuf_stopped,
             sender,
+            menu_right_click_signal_handler_id,
         };
 
         tray.render_normal_icon();
@@ -131,7 +144,7 @@ impl Tray {
         tray
     }
 
-    pub fn set_tooltip_text(&self, tooltip_text: &str) {
+    fn set_tooltip_text(&self, tooltip_text: &str) {
         unsafe {
             gtk_sys::gtk_status_icon_set_tooltip_text(
                 self.status_icon,
@@ -144,7 +157,7 @@ impl Tray {
         self.render_normal_icon()
     }
 
-    pub fn render_pause_icon(&self) {
+    fn render_pause_icon(&self) {
         self.render_pixbuf(&self.pixbuf_stopped);
     }
 
@@ -152,7 +165,7 @@ impl Tray {
         self.render_pixbuf(&self.pixbuf);
     }
 
-    pub fn render_pixbuf(&self, pixbuf: &gdk_pixbuf::Pixbuf) {
+    fn render_pixbuf(&self, pixbuf: &gdk_pixbuf::Pixbuf) {
         let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf =
             pixbuf.to_glib_none().0;
         unsafe {
@@ -197,7 +210,7 @@ impl Tray {
     }
 
     pub fn run(sender: glib::Sender<Msg>) -> Self {
-        let tray = Self::new(sender);
+        let mut tray = Self::new(sender);
         tray.set_tooltip_text("break-time");
 
         connect_activate(
@@ -207,23 +220,60 @@ impl Tray {
             },
         );
 
-        let sender = tray.sender.clone();
+        tray.conn_popup_menu(IsPaused::No);
 
-        connect_popup_menu(
-            tray.status_icon,
+        tray
+    }
+
+    pub fn resume(&mut self) {
+        self.render_normal_icon();
+        self.conn_popup_menu(IsPaused::No);
+    }
+
+    pub fn pause(&mut self) {
+        self.render_pause_icon();
+        self.conn_popup_menu(IsPaused::Yes);
+    }
+
+    pub fn break_end(&self) {
+        self.render_normal_icon();
+    }
+
+    fn conn_popup_menu(&mut self, is_paused: IsPaused) {
+        if let Some(prev_signal_handler_id) = &self.menu_right_click_signal_handler_id {
+             signal_handler_disconnect(self.status_icon, prev_signal_handler_id);
+        }
+
+        let sender = self.sender.clone();
+        let signal_handler_id = connect_popup_menu(
+            self.status_icon,
             move |_status_icon: *mut gtk_sys::GtkStatusIcon,
                   button,
                   activate_time| {
                 let menu = gtk::Menu::new();
 
-                let pause_item = gtk::MenuItem::new_with_label("Pause");
-                let sender_clone = sender.clone();
-                pause_item.connect_activate(move |_| {
-                    sender_clone
-                        .send(Msg::Pause)
-                        .expect("Could not send Msg::Pause")
-                });
-                menu.append(&pause_item);
+                match is_paused {
+                    IsPaused::No => {
+                        let pause_item = gtk::MenuItem::new_with_label("Pause");
+                        let sender_clone = sender.clone();
+                        pause_item.connect_activate(move |_| {
+                            sender_clone
+                                .send(Msg::Pause)
+                                .expect("Could not send Msg::Pause")
+                        });
+                        menu.append(&pause_item);
+                    }
+                    IsPaused::Yes => {
+                        let resume_item = gtk::MenuItem::new_with_label("Resume");
+                        let sender_clone = sender.clone();
+                        resume_item.connect_activate(move |_| {
+                            sender_clone
+                                .send(Msg::Resume)
+                                .expect("Could not send Msg::Resume")
+                        });
+                        menu.append(&resume_item);
+                    }
+                }
 
                 let quit_item = gtk::MenuItem::new_with_label("Quit");
                 let sender_clone = sender.clone();
@@ -238,9 +288,13 @@ impl Tray {
                 menu.popup_easy(button, activate_time);
             },
         );
-
-        tray
+        self.menu_right_click_signal_handler_id = Some(signal_handler_id);
     }
+}
+
+pub enum IsPaused {
+    Yes,
+    No,
 }
 
 fn duration_to_text(duration: Duration) -> String {

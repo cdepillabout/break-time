@@ -98,7 +98,7 @@ const DEFAULT_SETTINGS: &str = indoc!(
 
     # The number of seconds to use for a break if you've been idle. This
     # means that if break-time detects that you've been idle for 8 minutes,
-    # it will use that time as a break.  So it will then start waiting for
+    # it will use that time as a break.  It will then start waiting for
     # another seconds_between_breaks until starting another break.
     idle_detection_seconds = 480 # 8 minutes
 
