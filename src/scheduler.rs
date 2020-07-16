@@ -218,9 +218,9 @@ impl Scheduler {
     fn send_msgs_while_waiting(&self) -> WaitingResult {
         self.sender.send(super::Msg::ResetSysTrayIcon);
         let mut remaining_time = self.time_until_break;
-        for &period in PERIODS_TO_SEND_TIME_LEFT_MESSAGE.iter() {
+        for period in create_periods_to_send_time_left_message(self.time_until_break) {
             let opt_time_to_sleep = remaining_time.checked_sub(period);
-            // println!("In send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}", period, remaining_time, opt_time_to_sleep);
+            println!("In send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}", period, remaining_time, opt_time_to_sleep);
             match opt_time_to_sleep {
                 None => {
                     // This happens when the periods to send the time-left message are greater than
@@ -265,73 +265,100 @@ pub enum InnerMsg {
     HasBeenIdle,
 }
 
-// fn create_periods_to_send_time_left_message() -> Vec<Duration> {
-// }
+fn create_periods_to_send_time_left_message(time_between_breaks: Duration) -> Vec<Duration> {
+    let mut periods = vec![];
+    let secs_between_breaks = time_between_breaks.as_secs();
+    let mins_between_breaks = secs_between_breaks / 60;
 
-const PERIODS_TO_SEND_TIME_LEFT_MESSAGE: [Duration; 65] = [
-    Duration::from_secs(60 * 5),
-    Duration::from_secs(60 * 4),
-    Duration::from_secs(60 * 3),
-    Duration::from_secs(60 * 2),
-    Duration::from_secs(60),
-    Duration::from_secs(59),
-    Duration::from_secs(58),
-    Duration::from_secs(57),
-    Duration::from_secs(56),
-    Duration::from_secs(55),
-    Duration::from_secs(54),
-    Duration::from_secs(53),
-    Duration::from_secs(52),
-    Duration::from_secs(51),
-    Duration::from_secs(50),
-    Duration::from_secs(49),
-    Duration::from_secs(48),
-    Duration::from_secs(47),
-    Duration::from_secs(46),
-    Duration::from_secs(45),
-    Duration::from_secs(44),
-    Duration::from_secs(43),
-    Duration::from_secs(42),
-    Duration::from_secs(41),
-    Duration::from_secs(40),
-    Duration::from_secs(39),
-    Duration::from_secs(38),
-    Duration::from_secs(37),
-    Duration::from_secs(36),
-    Duration::from_secs(35),
-    Duration::from_secs(34),
-    Duration::from_secs(33),
-    Duration::from_secs(32),
-    Duration::from_secs(31),
-    Duration::from_secs(30),
-    Duration::from_secs(29),
-    Duration::from_secs(28),
-    Duration::from_secs(27),
-    Duration::from_secs(26),
-    Duration::from_secs(25),
-    Duration::from_secs(24),
-    Duration::from_secs(23),
-    Duration::from_secs(22),
-    Duration::from_secs(21),
-    Duration::from_secs(20),
-    Duration::from_secs(19),
-    Duration::from_secs(18),
-    Duration::from_secs(17),
-    Duration::from_secs(16),
-    Duration::from_secs(15),
-    Duration::from_secs(14),
-    Duration::from_secs(13),
-    Duration::from_secs(12),
-    Duration::from_secs(11),
-    Duration::from_secs(10),
-    Duration::from_secs(9),
-    Duration::from_secs(8),
-    Duration::from_secs(7),
-    Duration::from_secs(6),
-    Duration::from_secs(5),
-    Duration::from_secs(4),
-    Duration::from_secs(3),
-    Duration::from_secs(2),
-    Duration::from_secs(1),
-    Duration::from_secs(0),
-];
+    for min in (1..=mins_between_breaks).rev() {
+        periods.push(Duration::from_secs(min * 60));
+    }
+
+    for sec in (0..=59).rev() {
+        periods.push(Duration::from_secs(sec));
+    }
+
+    periods
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+
+    #[test]
+    fn test_periods_to_send_time_left_message() {
+        let res = create_periods_to_send_time_left_message(Duration::from_secs(5 * 60));
+
+        let periods_to_send_time_left_message_expected = vec![
+            Duration::from_secs(60 * 5),
+            Duration::from_secs(60 * 4),
+            Duration::from_secs(60 * 3),
+            Duration::from_secs(60 * 2),
+            Duration::from_secs(60),
+            Duration::from_secs(59),
+            Duration::from_secs(58),
+            Duration::from_secs(57),
+            Duration::from_secs(56),
+            Duration::from_secs(55),
+            Duration::from_secs(54),
+            Duration::from_secs(53),
+            Duration::from_secs(52),
+            Duration::from_secs(51),
+            Duration::from_secs(50),
+            Duration::from_secs(49),
+            Duration::from_secs(48),
+            Duration::from_secs(47),
+            Duration::from_secs(46),
+            Duration::from_secs(45),
+            Duration::from_secs(44),
+            Duration::from_secs(43),
+            Duration::from_secs(42),
+            Duration::from_secs(41),
+            Duration::from_secs(40),
+            Duration::from_secs(39),
+            Duration::from_secs(38),
+            Duration::from_secs(37),
+            Duration::from_secs(36),
+            Duration::from_secs(35),
+            Duration::from_secs(34),
+            Duration::from_secs(33),
+            Duration::from_secs(32),
+            Duration::from_secs(31),
+            Duration::from_secs(30),
+            Duration::from_secs(29),
+            Duration::from_secs(28),
+            Duration::from_secs(27),
+            Duration::from_secs(26),
+            Duration::from_secs(25),
+            Duration::from_secs(24),
+            Duration::from_secs(23),
+            Duration::from_secs(22),
+            Duration::from_secs(21),
+            Duration::from_secs(20),
+            Duration::from_secs(19),
+            Duration::from_secs(18),
+            Duration::from_secs(17),
+            Duration::from_secs(16),
+            Duration::from_secs(15),
+            Duration::from_secs(14),
+            Duration::from_secs(13),
+            Duration::from_secs(12),
+            Duration::from_secs(11),
+            Duration::from_secs(10),
+            Duration::from_secs(9),
+            Duration::from_secs(8),
+            Duration::from_secs(7),
+            Duration::from_secs(6),
+            Duration::from_secs(5),
+            Duration::from_secs(4),
+            Duration::from_secs(3),
+            Duration::from_secs(2),
+            Duration::from_secs(1),
+            Duration::from_secs(0),
+        ];
+
+        assert_eq!(res, periods_to_send_time_left_message_expected);
+    }
+}

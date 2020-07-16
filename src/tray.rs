@@ -296,6 +296,18 @@ impl Tray {
         );
         self.menu_right_click_signal_handler_id = Some(signal_handler_id);
     }
+
+    fn set_time_remaining_tool_tip(&self, remaining_time: Duration) {
+        self.set_tooltip_text(&format!("break-time: {} remaining until next break", remaining_duration_to_text(remaining_time)));
+    }
+
+    pub fn update_time_remaining(&self, remaining_time: Duration) {
+        if remaining_time <= Duration::from_secs(5 * 60) {
+            self.render_time_remaining_before_break(remaining_time);
+        }
+
+        self.set_time_remaining_tool_tip(remaining_time);
+    }
 }
 
 pub enum IsPaused {
@@ -308,5 +320,14 @@ fn duration_to_text(duration: Duration) -> String {
         format!("{}m", duration.as_secs() / 60)
     } else {
         duration.as_secs().to_string()
+    }
+}
+
+fn remaining_duration_to_text(duration: Duration) -> String {
+    let duration_secs = duration.as_secs();
+    if duration_secs > 60 {
+        format!("{} minute{}", duration_secs / 60, if duration_secs == 60 { "" } else { "s" })
+    } else {
+        format!("{} second{}", duration_secs, if duration_secs == 1 { "" } else { "s" })
     }
 }

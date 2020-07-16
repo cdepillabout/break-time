@@ -61,7 +61,7 @@ fn handle_msg_recv(
             scheduler_outer_sender.send(scheduler::Msg::Start);
         }
         Msg::TimeRemainingBeforeBreak(remaining_time) => {
-            tray.render_time_remaining_before_break(remaining_time);
+            tray.update_time_remaining(remaining_time);
         }
     }
 }
