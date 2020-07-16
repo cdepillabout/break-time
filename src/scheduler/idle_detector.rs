@@ -71,11 +71,11 @@ impl IdleDetector {
 
             let ms_since_user_input = idle_query_res.ms_since_user_input();
 
-            println!(
-                "ms_since_user_input: {}, suspend_milliseconds: {}",
-                ms_since_user_input,
-                suspend_milliseconds,
-            );
+            // println!(
+            //     "ms_since_user_input: {}, suspend_milliseconds: {}",
+            //     ms_since_user_input,
+            //     suspend_milliseconds,
+            // );
 
             if has_been_idle(idle_detection_milliseconds.into(), ms_since_user_input.into(), suspend_milliseconds) {
                 idle_detector.restart_wait_time_sender.send(InnerMsg::HasBeenIdle);
