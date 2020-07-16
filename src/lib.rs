@@ -76,8 +76,6 @@ pub fn default_main() {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    // TODO: pass the tray to the scheduler so the scheduler can determine when to start counting
-    // down on the tray...
     let mut tray = tray::Tray::run(sender.clone());
 
     println!("Starting the scheduler...");
