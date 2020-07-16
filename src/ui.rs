@@ -109,7 +109,7 @@ fn setup(state: &State) {
 
 fn connect_events(config: &Config, state: &State) {
     for window in state.get_app_wins() {
-        window.connect_key_press_event(
+        window.connect_key_release_event(
             clone!(@strong state => move |_, event_key| {
                 if event_key.get_keyval() == gdk::enums::key::space {
                     decrement_presses_remaining(&state);
