@@ -232,7 +232,6 @@ impl Scheduler {
                         .recv_timeout(time_to_sleep);
                     match res {
                         Ok(InnerMsg::HasBeenIdle) => {
-                            println!("HERERERERE");
                             return WaitingResult::NeedToRestart;
                         }
                         Ok(InnerMsg::Pause) => {
