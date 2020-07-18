@@ -9,24 +9,39 @@ break-time is an application that forces you to take breaks while working at
 your computer.  This is convenient for people that want to avoid sitting for
 too long, or staring at the computer screen for too long.
 
-The main feature of break-time is that it is really hard to end a break
-prematurely, but there are plugins provided to intelligently avoid breaks at
-inconvenient times.  For instance, there is a plugin to avoid having a break
-occur during a time when you have an event on your Google Calendar, as well as
-a plugin to avoid a break when you are on a video chat in Google Meet.
+The main feature of break-time is that there is no easy way to end a break
+early.  Once a break starts, you are forced to stop using your computer.
+However, there are plugins provided to avoid breaks at inconvenient times.  For
+instance, there is a plugin to avoid having a break occur during a time when
+you have an event on your Google Calendar, as well as a plugin to avoid a break
+when you are on a video chat in Google Meet.
 
 ## Installing
 
-Installing with `cargo`:
+break-time requires a few system libraries to be available.  On Debian/Ubuntu systems, these can be installed with the following command:
+
+```console
+$ sudo apt-get install libgtk-3-dev libxcb-screensaver0-dev
+```
+
+After this, you can install break-time with
+[`cargo`](https://doc.rust-lang.org/cargo/):
 
 ```console
 $ cargo install break-time
 ```
 
-You'll need to have GTK libraries available in your environment for this to
-work.
-
 ## Usage
+
+Once break-time is installed, I suggest running it once so that it creates a
+config file.  Immediately kill it with <kbd>Ctrl</kbd><kbd>C</kbd> after
+running it.
+
+```console
+$ break-time
+```
+
+break-time should create a config file in `~/.config/break-time/config.toml`.
 
 ## Why
 
