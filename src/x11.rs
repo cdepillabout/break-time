@@ -31,10 +31,9 @@ impl X11 {
     pub fn get_root_win(&self) -> Option<xcb::Window> {
         let setup: xcb::Setup = self.conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
-        let preferred_screen_pos = usize::try_from(self.preferred_screen).expect("x11 preferred_screen is not positive");
-        roots
-            .nth(preferred_screen_pos)
-            .map(|screen| screen.root())
+        let preferred_screen_pos = usize::try_from(self.preferred_screen)
+            .expect("x11 preferred_screen is not positive");
+        roots.nth(preferred_screen_pos).map(|screen| screen.root())
     }
 
     pub fn get_win_prop(

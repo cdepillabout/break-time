@@ -100,9 +100,9 @@ impl WindowTitles {
     fn get_root_win(&self) -> Result<xcb::Window, ()> {
         let setup: xcb::Setup = self.x11.conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
-        let preferred_screen_pos = usize::try_from(self.x11.preferred_screen).expect("x11 preferred_screen is not positive");
-        let screen: xcb::Screen =
-            roots.nth(preferred_screen_pos).ok_or(())?;
+        let preferred_screen_pos = usize::try_from(self.x11.preferred_screen)
+            .expect("x11 preferred_screen is not positive");
+        let screen: xcb::Screen = roots.nth(preferred_screen_pos).ok_or(())?;
         Ok(screen.root())
     }
 
@@ -220,10 +220,7 @@ struct WinProps {
 
 impl WinProps {
     fn get_all(all_win_prop_cookies: Vec<WinPropCookies>) -> Vec<Self> {
-        all_win_prop_cookies
-            .into_iter()
-            .map(Self::get)
-            .collect()
+        all_win_prop_cookies.into_iter().map(Self::get).collect()
     }
 
     fn get(win_prop_cookies: WinPropCookies) -> Self {

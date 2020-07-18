@@ -1,4 +1,3 @@
-
 use indoc::indoc;
 
 pub const DEFAULT_CONFIG_SETTINGS: &str = indoc!(

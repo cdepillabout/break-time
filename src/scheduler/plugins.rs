@@ -19,7 +19,11 @@ impl CanBreak {
     }
 
     pub fn from_bool(b: bool) -> Self {
-        if b { Self::Yes } else { Self::No }
+        if b {
+            Self::Yes
+        } else {
+            Self::No
+        }
     }
 
     pub fn combine(self, other: Self) -> Self {

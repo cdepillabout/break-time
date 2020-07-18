@@ -160,17 +160,15 @@ impl GoogleCalendar {
     fn can_break(&self) -> Result<CanBreak, GoogleCalErr> {
         // println!("now: {}, after twenty: {}", now.to_rfc3339(), in_twenty_mins.to_rfc3339());
 
-        self.fetchers
-            .iter()
-            .map(CalFetcher::can_break)
-            .fold(Ok(CanBreak::Yes), |accum, can_break_res| {
-                match (accum, can_break_res) {
-                    (Err(err), _) => Err(err),
-                    (_, Err(err)) => Err(err),
-                    (Ok(CanBreak::No), _) => Ok(CanBreak::No),
-                    (_, can_break) => can_break,
-                }
-            })
+        self.fetchers.iter().map(CalFetcher::can_break).fold(
+            Ok(CanBreak::Yes),
+            |accum, can_break_res| match (accum, can_break_res) {
+                (Err(err), _) => Err(err),
+                (_, Err(err)) => Err(err),
+                (Ok(CanBreak::No), _) => Ok(CanBreak::No),
+                (_, can_break) => can_break,
+            },
+        )
     }
 }
 

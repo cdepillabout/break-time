@@ -181,16 +181,16 @@ impl Tray {
 
     pub fn render_time_remaining_before_break(&self, remaining_time: Duration) {
         // println!("Called render time remaining before break, remaining_time: {:?}...", remaining_time);
-    // static IMG: &[u8] = include_bytes!("../imgs/clock.png");
+        // static IMG: &[u8] = include_bytes!("../imgs/clock.png");
         // let img: &mut &[u8] = &mut IMG.clone();
 
         // let image_surface = cairo::ImageSurface::create_from_png(img)
         //     .expect("should create png from mem");
-        
-         let mut img: &[u8] = <&[u8]>::clone(&IMG);
 
-         let image_surface = cairo::ImageSurface::create_from_png(&mut img)
-             .expect("should create png from mem");
+        let mut img: &[u8] = <&[u8]>::clone(&IMG);
+
+        let image_surface = cairo::ImageSurface::create_from_png(&mut img)
+            .expect("should create png from mem");
 
         let remaining_time_text = duration_to_text(remaining_time);
         let remaining_time_text_len = remaining_time_text.len();

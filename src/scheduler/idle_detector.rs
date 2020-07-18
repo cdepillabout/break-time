@@ -35,7 +35,8 @@ impl IdleDetector {
         let (conn, screen_num) = xcb::Connection::connect(None).unwrap();
         let setup: xcb::Setup = conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
-        let preferred_screen_pos = usize::try_from(screen_num).expect("x11 preferred_screen is not positive");
+        let preferred_screen_pos = usize::try_from(screen_num)
+            .expect("x11 preferred_screen is not positive");
         let screen: xcb::Screen = roots.nth(preferred_screen_pos).unwrap();
         let root_window: xcb::Window = screen.root();
 
