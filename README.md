@@ -162,6 +162,10 @@ If you want to use break-time with multiple Google Calendar accounts, you can
 add multiple addresses to `plugin.google_calendar.accounts`.  Although I would
 suggest only adding them one at a time.
 
+One way to check if this plugin is working is to set a short break interval,
+and create an event on your calendar.  break-time should not start a break
+while an event is taking place.
+
 ## Why
 
 I noticed that I was sitting in front of my computer for excessively long
