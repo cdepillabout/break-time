@@ -39,6 +39,7 @@ running it.
 
 ```console
 $ break-time
+^C
 ```
 
 break-time should create a config file in `~/.config/break-time/config.toml`.
