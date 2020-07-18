@@ -10,10 +10,10 @@ your computer.  This is convenient for people that want to avoid sitting for
 too long, or staring at the computer screen for too long.
 
 The main feature of break-time is that it is really hard to end a break
-prematurely, but break-time provides plugins to intelligently avoid breaks at
+prematurely, but there are plugins provided to intelligently avoid breaks at
 inconvenient times.  For instance, there is a plugin to avoid having a break
 occur during a time when you have an event on your Google Calendar, as well as
-a plugin to avoid a break when you are doing a video chat in Google Meet.
+a plugin to avoid a break when you are on a video chat in Google Meet.
 
 ## Installing
 
