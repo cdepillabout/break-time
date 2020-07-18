@@ -49,6 +49,11 @@ stdenv.mkDerivation {
     export MANPATH=":${xorg.libxcb.man}/share/man"
   '';
 
+  # These phases need to be set to noops so this shell file can actually be
+  # built with `nix-build shell.nix`.
+  unpackPhase = "true";
+  installPhase = "touch $out";
+
   # Set Environment Variables
   #RUST_BACKTRACE = 1;
 }

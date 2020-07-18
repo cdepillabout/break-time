@@ -218,7 +218,9 @@ impl Scheduler {
     fn send_msgs_while_waiting(&self) -> WaitingResult {
         self.sender.send(super::Msg::ResetSysTrayIcon);
         let mut remaining_time = self.time_until_break;
-        for period in create_periods_to_send_time_left_message(self.time_until_break) {
+        for period in
+            create_periods_to_send_time_left_message(self.time_until_break)
+        {
             let opt_time_to_sleep = remaining_time.checked_sub(period);
             println!("In send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}", period, remaining_time, opt_time_to_sleep);
             match opt_time_to_sleep {
@@ -264,7 +266,9 @@ pub enum InnerMsg {
     HasBeenIdle,
 }
 
-fn create_periods_to_send_time_left_message(time_between_breaks: Duration) -> Vec<Duration> {
+fn create_periods_to_send_time_left_message(
+    time_between_breaks: Duration,
+) -> Vec<Duration> {
     let mut periods = vec![];
     let secs_between_breaks = time_between_breaks.as_secs();
     let mins_between_breaks = secs_between_breaks / 60;
@@ -280,15 +284,15 @@ fn create_periods_to_send_time_left_message(time_between_breaks: Duration) -> Ve
     periods
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_periods_to_send_time_left_message() {
-        let res = create_periods_to_send_time_left_message(Duration::from_secs(5 * 60));
+        let res = create_periods_to_send_time_left_message(
+            Duration::from_secs(5 * 60),
+        );
 
         let periods_to_send_time_left_message_expected = vec![
             Duration::from_secs(60 * 5),

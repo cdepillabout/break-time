@@ -298,7 +298,10 @@ impl Tray {
     }
 
     fn set_time_remaining_tool_tip(&self, remaining_time: Duration) {
-        self.set_tooltip_text(&format!("break-time: {} until next break", remaining_duration_to_text(remaining_time)));
+        self.set_tooltip_text(&format!(
+            "break-time: {} until next break",
+            remaining_duration_to_text(remaining_time)
+        ));
     }
 
     pub fn update_time_remaining(&self, remaining_time: Duration) {
@@ -326,8 +329,16 @@ fn duration_to_text(duration: Duration) -> String {
 fn remaining_duration_to_text(duration: Duration) -> String {
     let duration_secs = duration.as_secs();
     if duration_secs > 60 {
-        format!("{} minute{}", duration_secs / 60, if duration_secs == 60 { "" } else { "s" })
+        format!(
+            "{} minute{}",
+            duration_secs / 60,
+            if duration_secs == 60 { "" } else { "s" }
+        )
     } else {
-        format!("{} second{}", duration_secs, if duration_secs == 1 { "" } else { "s" })
+        format!(
+            "{} second{}",
+            duration_secs,
+            if duration_secs == 1 { "" } else { "s" }
+        )
     }
 }
