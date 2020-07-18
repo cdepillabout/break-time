@@ -252,7 +252,7 @@ impl Scheduler {
             }
         }
 
-        return WaitingResult::Finished;
+        WaitingResult::Finished
     }
 }
 
