@@ -64,6 +64,12 @@ I have three main problems with other solutions:
 break-time is one of the first non-trivial Rust programs I've created,
 currently at around 2,500 lines (including whitespace and comments).
 
+The main difficulty in writing break-time was trying to find a good abstraction
+to deal with all the concurrent code.  In the end, I don't feel like I was able
+to do this, but I created
+[an issue](https://github.com/cdepillabout/break-time/issues/5) to think of how
+to improve this.
+
 ## Contributions
 
 Feel free to open an issue or PR for any
