@@ -14,7 +14,6 @@ use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 use config::Config;
-use prelude::*;
 use scheduler::Scheduler;
 use tray::Tray;
 

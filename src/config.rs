@@ -1,5 +1,4 @@
 use std::default::Default;
-use std::fs::File;
 use std::path::PathBuf;
 
 use indoc::indoc;

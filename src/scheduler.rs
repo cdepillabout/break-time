@@ -4,7 +4,6 @@ mod idle_detector;
 mod plugins;
 
 use super::config::Config;
-use super::tray::Tray;
 use idle_detector::IdleDetector;
 use plugins::{CanBreak, Plugin};
 

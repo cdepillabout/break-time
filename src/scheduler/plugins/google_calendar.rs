@@ -6,11 +6,11 @@ use std::net::TcpListener;
 use std::path::Path;
 
 use google_calendar3::{
-    CalendarHub, CalendarListEntry, Channel, Error, Events, Scope,
+    CalendarHub, CalendarListEntry, Events, Scope,
 };
 use yup_oauth2::{
-    ApplicationSecret, Authenticator, AuthenticatorDelegate,
-    DefaultAuthenticatorDelegate, DiskTokenStorage, Retry,
+    ApplicationSecret, Authenticator,
+    DefaultAuthenticatorDelegate, DiskTokenStorage,
 };
 
 fn get_available_port() -> Option<u16> {

@@ -1,7 +1,7 @@
 use super::builder;
 use super::prelude::*;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
-use std::time::{Instant, SystemTime};
+use std::time::SystemTime;
 
 use crate::config::Config;
 use crate::Msg;
