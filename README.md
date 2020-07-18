@@ -35,8 +35,31 @@ periods of time.  I thought that this was starting to lead to neck and shoulder
 pain, so I wanted to find a way to force myself to take more breaks.
 
 I tried a couple solutions, including a manual kitchen timer, timers on my
-smart phone, [Stretchly](https://hovancik.net/stretchly/), etc.  However,
-I've never found anything that really stuck.
+phone, [Stretchly](https://hovancik.net/stretchly/), etc.  However,
+I've never found anything that really worked well.
+
+I have three main problems with other solutions:
+
+-   It is too easy to ignore the breaks.  When using a timer on my phone, I
+    would quite often just turn off the alarm and continue working.  When using
+    Stretchly, I would often just immediately exit out of it whenever a break
+    started.
+
+    break-time fixes this by making it really hard to skip breaks.  Once a
+    break starts, you're basically forced to step away from your computer.
+
+-   Breaks occur at unconvenient times.  You never want a break to occur when
+    you're doing something important, like in a meeting or doing a video chat.
+
+    break-time fixes this by having plugins to detect when you're in a meeting
+    or on a video chat.
+
+-   There is no warning that a break is coming.  With other solutions, it is
+    frustrating when a break suddenly occurs in the middle of your work.
+
+    break-time fixes this by having a count-down timer in the systray icon.
+    You get a five-minute heads-up to wrap up any functions you're writing,
+    messages you're writing on Slack, documentation you're reading, etc.
 
 break-time is one of the first non-trivial Rust programs I've created,
 currently at around 2,500 lines (including whitespace and comments).
@@ -44,4 +67,4 @@ currently at around 2,500 lines (including whitespace and comments).
 ## Contributions
 
 Feel free to open an issue or PR for any
-bugs/problems/suggestions/improvements.
+bugs, problems, suggestions, or improvements.
