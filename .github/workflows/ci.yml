@@ -8,7 +8,7 @@ on:
 
 jobs:
   check:
-    name: Build
+    name: rust cargo / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -38,7 +38,7 @@ jobs:
           command: test
 
   lints:
-    name: Lints
+    name: rust lints / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -67,8 +67,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
     - uses: cachix/install-nix-action@v10
       with:
         nix_path: nixpkgs=channel:nixos-unstable
+
     - run: nix-build
+
     - run: nix-build shell.nix
