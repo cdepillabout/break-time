@@ -1,3 +1,5 @@
+use crate::prelude::*;
+
 use byteorder::{LittleEndian, ReadBytesExt};
 
 pub struct X11 {
@@ -6,11 +8,11 @@ pub struct X11 {
 }
 
 impl X11 {
-    pub fn connect() -> X11 {
+    pub fn connect() -> Self {
         let (conn, preferred_screen) = xcb::Connection::connect(None)
             .expect("Could not connect to X server");
 
-        X11 {
+        Self {
             conn,
             preferred_screen,
         }
@@ -29,8 +31,9 @@ impl X11 {
     pub fn get_root_win(&self) -> Option<xcb::Window> {
         let setup: xcb::Setup = self.conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
+        let preferred_screen_pos = usize::try_from(self.preferred_screen).expect("x11 preferred_screen is not positive");
         roots
-            .nth(self.preferred_screen as usize)
+            .nth(preferred_screen_pos)
             .map(|screen| screen.root())
     }
 
