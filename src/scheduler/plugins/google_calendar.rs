@@ -44,7 +44,7 @@ impl CalFetcher {
         let google_cal_dir_path =
             break_time_cache_dir.join(google_cal_dir_name);
 
-        std::fs::create_dir_all(&google_cal_dir_path).map_err(|io_err| ())?;
+        std::fs::create_dir_all(&google_cal_dir_path).map_err(|_io_err| ())?;
 
         let token_path = google_cal_dir_path.join(&email);
 
@@ -120,7 +120,7 @@ fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
             Some(all_accounts) => all_accounts,
         };
 
-    let all_emails = all_accounts.clone().try_into().map_err(|err| ());
+    let all_emails = all_accounts.clone().try_into().map_err(|_err| ());
 
     println!("All emails: {:?}", all_emails);
 
@@ -284,7 +284,7 @@ enum HasEvent {
 }
 
 #[derive(Debug)]
-enum GoogleCalErr {
+pub enum GoogleCalErr {
     FetchingEvents {
         calendar_id: String,
         google_cal_err: google_calendar3::Error,

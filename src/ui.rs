@@ -7,7 +7,7 @@ mod state;
 use glib::clone;
 use glib::source::Continue;
 use gtk::Inhibit;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, SystemTime};
 
 use super::Msg;
 use crate::config::Config;
@@ -29,7 +29,6 @@ fn handle_msg_recv(
     // enable(state);
 
     match msg {
-        Message::Display => Continue(true),
         Message::End => {
             for window in state.get_app_wins() {
                 window.hide();

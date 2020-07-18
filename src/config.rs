@@ -115,16 +115,16 @@ impl Config {
         let config_file_name = "config.toml";
         let config_file_path = match opts.conf_dir {
             Some(conf_dir) => {
-                std::fs::create_dir_all(&conf_dir).map_err(|io_err| ())?;
+                std::fs::create_dir_all(&conf_dir).map_err(|_io_err| ())?;
                 conf_dir.join(config_file_name)
             }
             None => {
                 let xdg_base_dir =
                     xdg::BaseDirectories::with_prefix("break-time")
-                        .map_err(|xdg_base_dir_err| ())?;
+                        .map_err(|_xdg_base_dir_err| ())?;
                 xdg_base_dir
                     .place_config_file(config_file_name)
-                    .map_err(|io_err| ())?
+                    .map_err(|_io_err| ())?
             }
         };
 
@@ -133,11 +133,11 @@ impl Config {
             None => {
                 let xdg_base_dir =
                     xdg::BaseDirectories::with_prefix("break-time")
-                        .map_err(|xdg_base_dir_err| ())?;
+                        .map_err(|_xdg_base_dir_err| ())?;
                 xdg_base_dir.get_cache_home()
             }
         };
-        std::fs::create_dir_all(&cache_dir).map_err(|io_err| ())?;
+        std::fs::create_dir_all(&cache_dir).map_err(|_io_err| ())?;
 
         // Try reading the config file to see whether it exists or not.
         let res_config_file = std::fs::read_to_string(&config_file_path);

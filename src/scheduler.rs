@@ -184,7 +184,7 @@ impl Scheduler {
                             Some(can_break) => {
                                 if can_break.into_bool() {
                                     println!("Scheduler realized it was able to break, so sending a message.");
-                                    self.sender.send(super::Msg::StartBreak);
+                                    self.sender.send(super::Msg::StartBreak).expect("TODO: figure out what to do about channels potentially failing");
                                     return WaitUntilBreakResult::FinishedWaiting;
                                 } else {
                                     println!("Could not break right now, so sleeping again...");
@@ -215,7 +215,7 @@ impl Scheduler {
     }
 
     fn send_msgs_while_waiting(&self) -> WaitingResult {
-        self.sender.send(super::Msg::ResetSysTrayIcon);
+        self.sender.send(super::Msg::ResetSysTrayIcon).expect("TODO: figure out what to do about channels potentially failing");
         let mut remaining_time = self.time_until_break;
         for period in
             create_periods_to_send_time_left_message(self.time_until_break)
@@ -242,7 +242,7 @@ impl Scheduler {
                         Err(_) => {
                             self.sender.send(
                                 super::Msg::TimeRemainingBeforeBreak(period),
-                            );
+                            ).expect("TODO: figure out what to do about channels potentially failing");
                             remaining_time -= time_to_sleep;
                         }
                     }

@@ -8,7 +8,6 @@ use crate::Msg;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Message {
-    Display,
     End,
 }
 
@@ -142,10 +141,10 @@ impl State {
     }
 
     pub fn notify_app_end(&self) {
-        self.app_sender.send(Msg::EndBreak);
+        self.app_sender.send(Msg::EndBreak).expect("TODO: figure out what to do about channels potentially failing");
     }
 
     pub fn end(&self) {
-        self.sender.send(Message::End);
+        self.sender.send(Message::End).expect("TODO: figure out what to do about channels potentially failing");
     }
 }

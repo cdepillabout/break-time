@@ -97,7 +97,7 @@ impl IdleDetector {
                 );
                 idle_detector
                     .restart_wait_time_sender
-                    .send(InnerMsg::HasBeenIdle);
+                    .send(InnerMsg::HasBeenIdle).expect("TODO: figure out what to do about channels potentially failing");
             }
         }
     }

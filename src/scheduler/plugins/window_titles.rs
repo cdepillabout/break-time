@@ -11,7 +11,7 @@ pub struct WindowTitles {
 }
 
 impl WindowTitles {
-    pub fn new(config: &Config) -> Result<Self, ()> {
+    pub fn new(_config: &Config) -> Result<Self, ()> {
         let x11 = X11::connect();
 
         let net_wm_name_atom = x11.create_atom("_NET_WM_NAME").ok_or(())?;
@@ -228,25 +228,25 @@ impl WinProps {
         let wm_name = win_prop_cookies
             .wm_name
             .get_reply()
-            .map_err(|generic_err| ())
+            .map_err(|_generic_err| ())
             .and_then(|wm_name_reply| {
                 let wm_name_vec = wm_name_reply.value().to_vec();
-                String::from_utf8(wm_name_vec).map_err(|from_utf8_err| ())
+                String::from_utf8(wm_name_vec).map_err(|_from_utf8_err| ())
             });
 
         let net_wm_name = win_prop_cookies
             .net_wm_name
             .get_reply()
-            .map_err(|generic_err| ())
+            .map_err(|_generic_err| ())
             .and_then(|net_wm_name_reply| {
                 let net_wm_name_vec = net_wm_name_reply.value().to_vec();
-                String::from_utf8(net_wm_name_vec).map_err(|from_utf8_err| ())
+                String::from_utf8(net_wm_name_vec).map_err(|_from_utf8_err| ())
             });
 
         let transient_for_wins = win_prop_cookies
             .wm_transient_for
             .get_reply()
-            .map_err(|generic_err| ())
+            .map_err(|_generic_err| ())
             .map(|trans_reply| trans_reply.value().to_vec());
 
         let ClassInfo {
@@ -256,9 +256,9 @@ impl WinProps {
             win_prop_cookies
                 .wm_class
                 .get_reply()
-                .map_err(|generic_error| ()),
+                .map_err(|_generic_error| ()),
             (),
-            |from_utf8_err| (),
+            |_from_utf8_err| (),
         );
 
         WinProps {

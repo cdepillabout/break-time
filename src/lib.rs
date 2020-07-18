@@ -38,11 +38,12 @@ fn handle_msg_recv(
     match msg {
         Msg::EndBreak => {
             println!("break ended");
-            scheduler_outer_sender.send(scheduler::Msg::Start);
+            tray.break_end();
+            scheduler_outer_sender.send(scheduler::Msg::Start).expect("TODO: figure out what to do about channels potentially failing");
         }
         Msg::Pause => {
             tray.pause();
-            scheduler_inner_sender.send(scheduler::InnerMsg::Pause);
+            scheduler_inner_sender.send(scheduler::InnerMsg::Pause).expect("TODO: figure out what to do about channels potentially failing");
         }
         Msg::Quit => {
             gtk::main_quit();
@@ -57,7 +58,7 @@ fn handle_msg_recv(
         }
         Msg::Resume => {
             tray.resume();
-            scheduler_outer_sender.send(scheduler::Msg::Start);
+            scheduler_outer_sender.send(scheduler::Msg::Start).expect("TODO: figure out what to do about channels potentially failing");
         }
         Msg::TimeRemainingBeforeBreak(remaining_time) => {
             tray.update_time_remaining(remaining_time);
