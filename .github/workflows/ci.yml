@@ -7,38 +7,6 @@ on:
     branches: [master]
 
 jobs:
-  #stack:
-  #  name: stack / ubuntu-latest
-  #  runs-on: ubuntu-latest
-  #  strategy:
-  #    matrix:
-  #      stack: ["latest"]
-
-  #  steps:
-  #  - uses: actions/checkout@v2
-  #    #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
-
-  #  - uses: actions/setup-haskell@v1.1
-  #    name: Setup Haskell Stack
-  #    with:
-  #      stack-version: ${{ matrix.stack }}
-
-  #  - uses: actions/cache@v1
-  #    name: Cache ~/.stack
-  #    with:
-  #      path: ~/.stack
-  #      key: ${{ runner.os }}-${{ matrix.ghc }}-stack
-
-  #  - name: Install Required System Packages
-  #    run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
-
-  #  - name: Build
-  #    run: |
-  #      stack build --test --bench --no-run-tests --no-run-benchmarks --flag termonad:buildexamples
-  #  - name: Test
-  #    run: |
-  #      stack test --flag termonad:buildexamples
-
   check:
     name: Build
     runs-on: ubuntu-latest
@@ -51,6 +19,9 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Install Required System Packages
+        run: sudo apt-get install libgtk-3-dev # gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
+
       - name: Run cargo check
         uses: actions-rs/cargo@v1
         with:
@@ -60,7 +31,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --all-features
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
