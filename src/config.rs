@@ -37,7 +37,7 @@ impl Default for PluginSettings {
             toml::Value::Table(x11_window_title_checker),
         );
 
-        PluginSettings(plugin_settings_table)
+        Self(plugin_settings_table)
     }
 }
 
@@ -55,29 +55,29 @@ pub struct Settings {
     pub all_plugin_settings: PluginSettings,
 }
 
-fn default_break_duration_seconds() -> u32 {
+const fn default_break_duration_seconds() -> u32 {
     60 * 10
 }
 
-fn default_seconds_between_breaks() -> u32 {
+const fn default_seconds_between_breaks() -> u32 {
     60 * 50
 }
 
-fn default_clicks_to_end_break_early() -> u32 {
+const fn default_clicks_to_end_break_early() -> u32 {
     400
 }
 
-fn default_idle_detection_seconds() -> u32 {
+const fn default_idle_detection_seconds() -> u32 {
     480
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings {
+        Self {
             break_duration_seconds: default_break_duration_seconds(),
             seconds_between_breaks: default_seconds_between_breaks(),
             clicks_to_end_break_early: default_clicks_to_end_break_early(),
-            all_plugin_settings: Default::default(),
+            all_plugin_settings: PluginSettings::default(),
             idle_detection_seconds: default_idle_detection_seconds(),
         }
     }
@@ -158,7 +158,7 @@ impl Config {
             }
         };
 
-        let config = Config {
+        let config = Self {
             file_path: config_file_path,
             cache_dir,
             settings,

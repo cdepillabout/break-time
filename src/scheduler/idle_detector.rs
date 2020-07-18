@@ -19,6 +19,7 @@ use std::time::{Duration, SystemTime};
 
 use super::InnerMsg;
 use crate::config::Config;
+use crate::prelude::*;
 
 const SLEEP_SECONDS: u64 = 20;
 const SLEEP_MILLISECONDS: u128 = (SLEEP_SECONDS as u128) * 1000;
@@ -34,7 +35,8 @@ impl IdleDetector {
         let (conn, screen_num) = xcb::Connection::connect(None).unwrap();
         let setup: xcb::Setup = conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
-        let screen: xcb::Screen = roots.nth(screen_num as usize).unwrap();
+        let preferred_screen_pos = usize::try_from(screen_num).expect("x11 preferred_screen is not positive");
+        let screen: xcb::Screen = roots.nth(preferred_screen_pos).unwrap();
         let root_window: xcb::Window = screen.root();
 
         Self {
@@ -103,7 +105,7 @@ impl IdleDetector {
     }
 }
 
-fn has_been_idle(
+const fn has_been_idle(
     idle_detection_milliseconds: u128,
     milliseconds_since_user_input: u128,
     suspend_milliseconds: u128,

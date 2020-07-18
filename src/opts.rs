@@ -17,6 +17,6 @@ pub struct Opts {
 
 impl Opts {
     pub fn parse_from_args() -> Self {
-        Opts::from_args()
+        Self::from_args()
     }
 }

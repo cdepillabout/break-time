@@ -1,7 +1,7 @@
 #![deny(unsafe_code)]
 #![deny(clippy::all, clippy::pedantic)]
 #![warn(clippy::nursery)]
-#![allow(clippy::needless_borrow)]
+#![allow(clippy::needless_borrow, clippy::expect_fun_call, clippy::single_match_else, clippy::match_same_arms)]
 
 mod config;
 mod opts;

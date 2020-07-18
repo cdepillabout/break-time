@@ -56,7 +56,7 @@ impl CalFetcher {
 
         let calendar_ids = get_all_calendar_ids(&hub);
 
-        Ok(CalFetcher {
+        Ok(Self {
             email,
             hub,
             calendar_ids,
@@ -154,7 +154,7 @@ impl GoogleCalendar {
 
         let fetchers = collect_first_err(fetchers_res)?;
 
-        Ok(GoogleCalendar { fetchers })
+        Ok(Self { fetchers })
     }
 
     fn can_break(&self) -> Result<CanBreak, GoogleCalErr> {
@@ -162,7 +162,7 @@ impl GoogleCalendar {
 
         self.fetchers
             .iter()
-            .map(|fetcher| fetcher.can_break())
+            .map(CalFetcher::can_break)
             .fold(Ok(CanBreak::Yes), |accum, can_break_res| {
                 match (accum, can_break_res) {
                     (Err(err), _) => Err(err),
@@ -184,7 +184,7 @@ fn create_auth(disk_token_storage: DiskTokenStorage) -> Result<Auth, ()> {
             "http://127.0.0.1".to_string(),
             "urn:ietf:wg:oauth:2.0:oob".to_string(),
         ],
-        ..Default::default()
+        ..ApplicationSecret::default()
     };
 
     let http_client_for_auth: hyper::Client = hyper::Client::with_connector(
@@ -294,7 +294,7 @@ impl std::error::Error for GoogleCalErr {}
 impl std::fmt::Display for GoogleCalErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GoogleCalErr::FetchingEvents {
+            Self::FetchingEvents {
                 calendar_id,
                 google_cal_err,
             } => write!(
@@ -333,11 +333,11 @@ fn has_event(
             match events.items {
                 None => Ok(HasEvent::No),
                 Some(event_items) => {
-                    if event_items.len() >= 1 {
+                    if event_items.is_empty() {
+                        Ok(HasEvent::No)
+                    } else {
                         println!("There were some event items from calendar id {}: {:?}", calendar_id, event_items);
                         Ok(HasEvent::Yes)
-                    } else {
-                        Ok(HasEvent::No)
                     }
                 }
             }

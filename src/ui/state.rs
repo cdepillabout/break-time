@@ -18,11 +18,11 @@ pub struct Monitor {
 }
 
 impl Monitor {
-    pub fn new(id: i32, monitor: gdk::Monitor) -> Self {
-        Monitor { id, monitor }
+    pub const fn new(id: i32, monitor: gdk::Monitor) -> Self {
+        Self { id, monitor }
     }
 
-    pub fn new_from_id(display: gdk::Display, id: i32) -> Self {
+    pub fn new_from_id(display: &gdk::Display, id: i32) -> Self {
         let mon = display.get_monitor(id).expect(&format!(
             "Could not get monitor for monitor index {:?}",
             id
@@ -36,7 +36,7 @@ impl Monitor {
         let num_monitors = default_display.get_n_monitors();
         (0..num_monitors)
             .map(|monitor_index| {
-                Self::new_from_id(default_display.clone(), monitor_index)
+                Self::new_from_id(&default_display, monitor_index)
             })
             .collect()
     }
@@ -79,7 +79,7 @@ impl State {
             .take(monitors_num)
             .collect();
 
-        State {
+        Self {
             builders,
             monitors,
             sender,
@@ -101,7 +101,7 @@ impl State {
             &mut *self.presses_remaining.write().unwrap();
 
         if *state_presses_remaining > 0 {
-            *state_presses_remaining = *state_presses_remaining - 1;
+            *state_presses_remaining -= 1;
         }
 
         *state_presses_remaining

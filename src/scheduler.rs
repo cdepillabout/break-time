@@ -25,7 +25,7 @@ impl Plugins {
             Box::new(window_title_plugin),
             Box::new(google_calendar_plugin),
         ];
-        Ok(Plugins(all_plugins))
+        Ok(Self(all_plugins))
     }
 
     fn can_break_now(
@@ -36,7 +36,7 @@ impl Plugins {
                 Option<CanBreak>,
                 Vec<Box<dyn std::error::Error>>,
             ),
-            plugin: &Box<dyn Plugin>,
+            plugin: &dyn Plugin,
         ) -> (Option<CanBreak>, Vec<Box<dyn std::error::Error>>) {
             let res_can_break = plugin.can_break_now();
             match res_can_break {
@@ -47,7 +47,7 @@ impl Plugins {
                 Ok(can_break) => {
                     let new_can_break = opt_old_can_break
                         .map_or(can_break, |old_can_break| {
-                            can_break.combine(&old_can_break)
+                            can_break.combine(old_can_break)
                         });
                     (Some(new_can_break), err_accum)
                 }
@@ -97,7 +97,7 @@ impl Scheduler {
         break_ending_receiver: Receiver<Msg>,
         restart_wait_time_receiver: Receiver<InnerMsg>,
     ) -> Result<Self, ()> {
-        Ok(Scheduler {
+        Ok(Self {
             sender,
             plugins: Plugins::new(config)?,
             time_until_break: Duration::from_secs(
@@ -119,7 +119,7 @@ impl Scheduler {
         let config_clone = config.clone();
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
-            let mut sched = Scheduler::new(
+            let mut sched = Self::new(
                 &config_clone,
                 sender,
                 sched_break_ending_receiver,

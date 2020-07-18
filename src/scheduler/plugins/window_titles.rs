@@ -1,6 +1,7 @@
 use super::{CanBreak, Plugin};
 
 use crate::config::Config;
+use crate::prelude::*;
 
 use crate::x11::X11;
 
@@ -17,14 +18,14 @@ impl WindowTitles {
         let net_wm_name_atom = x11.create_atom("_NET_WM_NAME").ok_or(())?;
         let utf8_string_atom = x11.create_atom("UTF8_STRING").ok_or(())?;
 
-        Ok(WindowTitles {
+        Ok(Self {
             x11,
             net_wm_name_atom,
             utf8_string_atom,
         })
     }
 
-    fn request_win_props<'a>(&'a self, win: xcb::Window) -> WinPropCookies<'a> {
+    fn request_win_props(&'_ self, win: xcb::Window) -> WinPropCookies<'_> {
         let wm_name_cookie = xcb::xproto::get_property(
             &self.x11.conn,
             false,
@@ -99,8 +100,9 @@ impl WindowTitles {
     fn get_root_win(&self) -> Result<xcb::Window, ()> {
         let setup: xcb::Setup = self.x11.conn.get_setup();
         let mut roots: xcb::ScreenIterator = setup.roots();
+        let preferred_screen_pos = usize::try_from(self.x11.preferred_screen).expect("x11 preferred_screen is not positive");
         let screen: xcb::Screen =
-            roots.nth(self.x11.preferred_screen as usize).ok_or(())?;
+            roots.nth(preferred_screen_pos).ok_or(())?;
         Ok(screen.root())
     }
 
@@ -133,7 +135,7 @@ impl CanBreakPred<Box<dyn Fn(&WinProps) -> CanBreak>> {
     where
         G: 'static + Fn(&str, &str, &str) -> CanBreak,
     {
-        CanBreakPred(Box::new(move |win_props: &WinProps| {
+        Self(Box::new(move |win_props: &WinProps| {
             match (
                 &win_props.net_wm_name,
                 &win_props.class_name,
@@ -155,8 +157,8 @@ impl CanBreakPred<Box<dyn Fn(&WinProps) -> CanBreak>> {
 struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
 
 impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
-    fn all() -> CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
-        CanBreakPreds(vec![
+    fn all() -> Self {
+        Self(vec![
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
                  class_name: &str,
@@ -220,7 +222,7 @@ impl WinProps {
     fn get_all(all_win_prop_cookies: Vec<WinPropCookies>) -> Vec<Self> {
         all_win_prop_cookies
             .into_iter()
-            .map(|win_prop_cookies| WinProps::get(win_prop_cookies))
+            .map(Self::get)
             .collect()
     }
 
@@ -261,7 +263,7 @@ impl WinProps {
             |_from_utf8_err| (),
         );
 
-        WinProps {
+        Self {
             wm_name,
             net_wm_name,
             transient_for_wins,
@@ -277,8 +279,8 @@ struct ClassInfo<T> {
 }
 
 impl<T: Clone> ClassInfo<T> {
-    fn err(t: T) -> ClassInfo<T> {
-        ClassInfo {
+    fn err(t: T) -> Self {
+        Self {
             name: Err(t.clone()),
             class: Err(t),
         }
@@ -288,8 +290,8 @@ impl<T: Clone> ClassInfo<T> {
         raw: &[u8],
         index: usize,
         utf8_err_mapper: F,
-    ) -> ClassInfo<T> {
-        ClassInfo {
+    ) -> Self {
+        Self {
             name: String::from_utf8(raw[0..index].to_vec())
                 .map_err(&utf8_err_mapper),
             class: String::from_utf8(raw[index + 1..raw.len() - 1].to_vec())
@@ -301,12 +303,12 @@ impl<T: Clone> ClassInfo<T> {
         raw: &[u8],
         no_index_err: T,
         utf8_err_mapper: F,
-    ) -> ClassInfo<T> {
+    ) -> Self {
         let option_index = raw.iter().position(|&b| b == 0);
         match option_index {
-            None => ClassInfo::err(no_index_err),
+            None => Self::err(no_index_err),
             Some(index) => {
-                ClassInfo::from_raw_data_with_index(raw, index, utf8_err_mapper)
+                Self::from_raw_data_with_index(raw, index, utf8_err_mapper)
             }
         }
     }
@@ -315,12 +317,12 @@ impl<T: Clone> ClassInfo<T> {
         res_raw: Result<xcb::GetPropertyReply, T>,
         no_index_err: T,
         utf8_err_mapper: F,
-    ) -> ClassInfo<T> {
+    ) -> Self {
         match res_raw {
-            Err(t) => ClassInfo::err(t),
+            Err(t) => Self::err(t),
             Ok(raw) => {
                 let all = raw.value::<u8>();
-                ClassInfo::from_raw_data(all, no_index_err, utf8_err_mapper)
+                Self::from_raw_data(all, no_index_err, utf8_err_mapper)
             }
         }
     }

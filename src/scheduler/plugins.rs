@@ -13,27 +13,30 @@ pub enum CanBreak {
 impl CanBreak {
     pub fn into_bool(self) -> bool {
         match self {
-            CanBreak::Yes => true,
-            CanBreak::No => false,
+            Self::Yes => true,
+            Self::No => false,
         }
     }
 
     pub fn from_bool(b: bool) -> Self {
-        match b {
-            true => CanBreak::Yes,
-            false => CanBreak::No,
-        }
+        if b { Self::Yes } else { Self::No }
     }
 
-    pub fn combine(&self, other: &Self) -> Self {
+    pub fn combine(self, other: Self) -> Self {
         match (self, other) {
-            (CanBreak::No, _) => CanBreak::No,
-            (_, CanBreak::No) => CanBreak::No,
-            _ => CanBreak::Yes,
+            (Self::No, _) => Self::No,
+            (_, Self::No) => Self::No,
+            _ => Self::Yes,
         }
     }
 }
 
 pub trait Plugin {
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>>;
+}
+
+impl Plugin for Box<dyn Plugin> {
+    fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
+        (**self).can_break_now()
+    }
 }
