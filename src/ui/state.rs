@@ -6,7 +6,7 @@ use std::time::SystemTime;
 use crate::config::Config;
 use crate::Msg;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Message {
     End,
 }

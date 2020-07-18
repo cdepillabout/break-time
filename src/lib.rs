@@ -1,6 +1,7 @@
 #![deny(unsafe_code)]
 #![deny(clippy::all, clippy::pedantic)]
 #![warn(clippy::nursery)]
+#![allow(clippy::needless_borrow)]
 
 mod config;
 mod opts;
