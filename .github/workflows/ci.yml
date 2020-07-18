@@ -18,9 +18,12 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+          components: rustfmt, clippy
 
       - name: Install Required System Packages
-        run: sudo apt-get install libgtk-3-dev # gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
+        run:
+            - sudo apt-get update
+            - sudo apt-get install libgtk-3-dev # gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
 
       - name: Run cargo check
         uses: actions-rs/cargo@v1
@@ -37,18 +40,11 @@ jobs:
         with:
           command: test
 
-  lints:
-    name: rust lints / ubuntu-latest
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions-rs/toolchain@v1
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+          command: clippy
+          args: -- -D warnings
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
@@ -56,11 +52,6 @@ jobs:
           command: fmt
           args: --all -- --check
 
-      - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
 
   nix:
     name: nix / ubuntu-latest
