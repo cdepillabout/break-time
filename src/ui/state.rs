@@ -141,10 +141,14 @@ impl State {
     }
 
     pub fn notify_app_end(&self) {
-        self.app_sender.send(Msg::EndBreak).expect("TODO: figure out what to do about channels potentially failing");
+        self.app_sender.send(Msg::EndBreak).expect(
+            "TODO: figure out what to do about channels potentially failing",
+        );
     }
 
     pub fn end(&self) {
-        self.sender.send(Message::End).expect("TODO: figure out what to do about channels potentially failing");
+        self.sender.send(Message::End).expect(
+            "TODO: figure out what to do about channels potentially failing",
+        );
     }
 }

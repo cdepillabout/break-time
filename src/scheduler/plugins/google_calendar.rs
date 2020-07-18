@@ -5,12 +5,10 @@ use crate::config::{Config, PluginSettings};
 use std::net::TcpListener;
 use std::path::Path;
 
-use google_calendar3::{
-    CalendarHub, CalendarListEntry, Events, Scope,
-};
+use google_calendar3::{CalendarHub, CalendarListEntry, Events, Scope};
 use yup_oauth2::{
-    ApplicationSecret, Authenticator,
-    DefaultAuthenticatorDelegate, DiskTokenStorage,
+    ApplicationSecret, Authenticator, DefaultAuthenticatorDelegate,
+    DiskTokenStorage,
 };
 
 fn get_available_port() -> Option<u16> {

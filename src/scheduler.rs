@@ -215,7 +215,9 @@ impl Scheduler {
     }
 
     fn send_msgs_while_waiting(&self) -> WaitingResult {
-        self.sender.send(super::Msg::ResetSysTrayIcon).expect("TODO: figure out what to do about channels potentially failing");
+        self.sender.send(super::Msg::ResetSysTrayIcon).expect(
+            "TODO: figure out what to do about channels potentially failing",
+        );
         let mut remaining_time = self.time_until_break;
         for period in
             create_periods_to_send_time_left_message(self.time_until_break)
