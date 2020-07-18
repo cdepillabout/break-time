@@ -86,14 +86,14 @@ impl CalFetcher {
     }
 }
 
-const GOOGLE_CLIENT_ID: &'static str =
+const GOOGLE_CLIENT_ID: &str =
     "728095687622-mpib9rmdtck7e8ln9egelnns6na0me08.apps.googleusercontent.com";
 
 // It is weird embedding something called a "client_secret" directly in the source
 // code, but it doesn't seem like this needs to be something that is actually kept
 // secret:
 // https://stackoverflow.com/questions/59416326/safely-distribute-oauth-2-0-client-secret-in-desktop-applications-in-python
-const GOOGLE_CLIENT_SECRET: &'static str = "mI7MmEnboy8jdYEBjK9rZ2M2";
+const GOOGLE_CLIENT_SECRET: &str = "mI7MmEnboy8jdYEBjK9rZ2M2";
 
 // TODO: Create a datatype to hold all the settings for the GoogleCalendar plugin.
 // Don't try parsing it out manually here.

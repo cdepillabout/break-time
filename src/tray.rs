@@ -6,8 +6,8 @@ use std::time::Duration;
 use crate::prelude::*;
 use crate::Msg;
 
-static IMG: &'static [u8] = include_bytes!("../imgs/clock.png");
-static IMG_STOPPED: &'static [u8] = include_bytes!("../imgs/clock-stopped.png");
+static IMG: &[u8] = include_bytes!("../imgs/clock.png");
+static IMG_STOPPED: &[u8] = include_bytes!("../imgs/clock-stopped.png");
 // static IMG2: &'static [u8] = include_bytes!("../imgs/clock-2.png");
 
 fn connect_activate<F>(
