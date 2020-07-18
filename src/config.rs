@@ -64,7 +64,7 @@ fn default_seconds_between_breaks() -> u32 {
 }
 
 fn default_clicks_to_end_break_early() -> u32 {
-    100
+    400
 }
 
 fn default_idle_detection_seconds() -> u32 {

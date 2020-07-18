@@ -43,6 +43,27 @@ $ break-time
 ```
 
 break-time should create a config file in `~/.config/break-time/config.toml`.
+Open up this config file in a text editor to see what options are available to
+configure.  If any options are not understandable, please open an issue.
+
+The most interesting option will probably be `accounts` (or
+`plugin.google_calendar.accounts`).  This is described in the next section.
+
+After you have configured break-time, run it again.
+
+```console
+$ break-time
+```
+
+break-time will count down until it is time for the next break.
+
+break-time will create a systray icon.  If you mouse over it, it will tell you
+how many minutes are left until your next break.  If you right click on the
+systray icon, you can pause and resume the break count-down timer.
+
+When it is time for your next break, break-time will pop up a screen telling
+you to take a break.  You won't be able to close this screen until either the
+break-time is over, or you press the spacebar 400 times.
 
 ## Why
 

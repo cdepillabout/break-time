@@ -17,6 +17,7 @@ use config::Config;
 use scheduler::Scheduler;
 use tray::Tray;
 
+#[derive(Clone, Copy, Debug)]
 pub enum Msg {
     EndBreak,
     Pause,
@@ -30,8 +31,8 @@ pub enum Msg {
 fn handle_msg_recv(
     config: &Config,
     sender: glib::Sender<Msg>,
-    scheduler_outer_sender: Sender<scheduler::Msg>,
-    scheduler_inner_sender: Sender<scheduler::InnerMsg>,
+    scheduler_outer_sender: &Sender<scheduler::Msg>,
+    scheduler_inner_sender: &Sender<scheduler::InnerMsg>,
     tray: &mut Tray,
     msg: Msg,
 ) {
@@ -86,8 +87,8 @@ pub fn default_main() {
         handle_msg_recv(
             &config,
             sender.clone(),
-            scheduler_outer_sender.clone(),
-            scheduler_inner_sender.clone(),
+            &scheduler_outer_sender,
+            &scheduler_inner_sender,
             &mut tray,
             msg,
         );
