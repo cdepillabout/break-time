@@ -72,7 +72,7 @@ impl IdleDetector {
             // been suspended for.  If the computer wasn't actually suspended, then this should be
             // very close to 0.
             let suspend_milliseconds: u128 =
-                time_difference_milliseconds - SLEEP_MILLISECONDS;
+                time_difference_milliseconds.saturating_sub(SLEEP_MILLISECONDS);
 
             let idle_query_res = xcb::screensaver::query_info(
                 &idle_detector.conn,
