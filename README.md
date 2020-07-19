@@ -47,8 +47,8 @@ $ break-time
 
 break-time should create a configuration file in
 `~/.config/break-time/config.toml`.  Open up this configuration file in a text
-editor to see what options are available.  If the explanation for any options is
-not understandable, please open an issue.
+editor to see what options are available.  If the explanations for any options
+are not understandable, please open an issue.
 
 The most interesting option will probably be `accounts` (or
 `plugin.google_calendar.accounts`).  This is described in the next section.
