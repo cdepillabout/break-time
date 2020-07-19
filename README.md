@@ -16,6 +16,9 @@ instance, there is a plugin to avoid having a break occur during a time when
 you have an event on your Google Calendar, as well as a plugin to avoid a break
 when you are on a video chat in Google Meet.
 
+break-time currently only runs on Linux with X11.  However, PRs are welcome
+adding support for other platforms and window systems.
+
 ## Installing
 
 break-time requires a few system libraries to be available.  On Debian/Ubuntu systems, these can be installed with the following command:
