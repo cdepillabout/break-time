@@ -1,6 +1,6 @@
 [package]
 name = "break-time"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["cdepillabout@gmail.com"]
 edition = "2018"
 description = "An app to force you to take breaks regularly while using the computer"
