@@ -34,7 +34,7 @@ $ cargo install break-time
 ## Usage
 
 Once break-time is installed, I suggest running it once so that it creates a
-configuration file.  Immediately kill it with <kbd>Ctrl</kbd><kbd>C</kbd> after
+configuration file.  Immediately kill it with <kbd>Ctrl</kbd>-<kbd>C</kbd> after
 running it.
 
 ```console
@@ -44,8 +44,8 @@ $ break-time
 
 break-time should create a configuration file in
 `~/.config/break-time/config.toml`.  Open up this configuration file in a text
-editor to see what options are available to configure.  If the explanation on
-any options is not understandable, please open an issue.
+editor to see what options are available.  If the explanation for any options is
+not understandable, please open an issue.
 
 The most interesting option will probably be `accounts` (or
 `plugin.google_calendar.accounts`).  This is described in the next section.
@@ -56,11 +56,11 @@ After you have configured break-time, run it again.
 $ break-time
 ```
 
-break-time will count down until it is time for the next break.
+break-time will countdown until it is time for the next break.
 
 break-time will create a systray icon.  If you mouse over it, it will tell you
 how many minutes are left until your next break.  If you right click on the
-systray icon, you can pause and resume the break count-down timer.
+systray icon, you can pause and resume the break countdown timer.
 
 When it is time for your next break, break-time will pop up a screen telling
 you to take a break.  You won't be able to close this screen until either the
@@ -78,7 +78,7 @@ work and how to configure them.
 The X Window Title plugin checks whether or not there is an X Window with a
 given name and title.
 
-This is convenient to stop a break from occurring when you're on a video chat.
+This is convenient to stop a break from occurring when you're in a video chat.
 
 Currently, this plugin only checks for a few specific window names and titles.
 You can see what window names and titles are checked for in
@@ -86,6 +86,11 @@ You can see what window names and titles are checked for in
 
 If you want additional applications to be supported, please open an
 issue or send a PR modifying this function.
+
+One way to check if this plugin is working is start break-time with a short
+break interval, and then open https://meet.google.com/ in Firefox or Chromium.
+break-time should not start a break while https://meet.google.com/ is open (and
+the currently focused tab).
 
 #### Google Calendar
 
@@ -96,9 +101,8 @@ break-time from starting a break.
 This is convenient to stop a break from happening when you're in a meeting at
 work.
 
-This plugin requires some configuration before it can be used.
-
-First, you must add your Gmail address to the break-time configuration file,
+This plugin requires some configuration before it can be used.  First, you must
+add your Gmail address to the break-time configuration file,
 `~/.config/break-time/config.toml`.  The `accounts` (or
 `plugin.google_calendar.accounts`) field should be set to a list of your Gmail
 addresses.  I suggest only adding one at a time.
@@ -136,8 +140,8 @@ The next screen will ask you to grant break-time the following two permissions:
 
 -   View events on all your calendars
 
-    This allows break-time to actually check the start and end times of the
-    events on your calendar.
+    This allows break-time to check the start and end times of the events on
+    your calendar.
 
 -   View your calendars
 
@@ -154,13 +158,12 @@ definitely doesn't transmit it over the network after receiving it from the
 Google Calendar API.  If you're worried about using this plugin, I'd recommend
 reading the source code of the
 [`google_calendar.rs`](https://github.com/cdepillabout/break-time/blob/master/src/scheduler/plugins/google_calendar.rs).
-
-The only big security concern is that break-time stores an OAuth token to disk
-so that it can re-use it next time you start break-time.
+The only security concern is that break-time stores an OAuth token to disk so
+that it can re-use it next time you start break-time.
 
 If you want to use break-time with multiple Google Calendar accounts, you can
-add multiple addresses to `plugin.google_calendar.accounts`.  Although I would
-suggest only adding them one at a time.
+add multiple addresses to `plugin.google_calendar.accounts`.  Although, I suggest
+only adding an account and doing authorization one at a time.
 
 One way to check if this plugin is working is to set a short break interval,
 and create an event on your calendar.  break-time should not start a break
@@ -168,35 +171,34 @@ while an event is taking place.
 
 ## Why
 
-I noticed that I was sitting in front of my computer for excessively long
-periods of time.  I thought that this was starting to lead to neck and shoulder
-pain, so I wanted to find a way to force myself to take more breaks.
+I noticed I was sitting in front of my computer for excessively long periods of
+time.  I thought this was starting to lead to neck and shoulder pain, so I
+wanted to find a way to force myself to take more breaks.
 
 I tried a couple solutions, including a manual kitchen timer, timers on my
-phone, [Stretchly](https://hovancik.net/stretchly/), etc.  However,
-I've never found anything that really worked well.
+phone, applications like [Stretchly](https://hovancik.net/stretchly/), etc.
+However, I've never found anything that really worked well.
 
 I have three main problems with other solutions:
 
 -   It is too easy to ignore the breaks.  When using a timer on my phone, I
-    would quite often just turn off the alarm and continue working.  When using
-    Stretchly, I would often just immediately exit out of it whenever a break
-    started.
+	would often turn off the alarm and continue working.  When using Stretchly,
+    I would often exit out of it whenever a break started.
 
     break-time fixes this by making it really hard to skip breaks.  Once a
-    break starts, you're basically forced to step away from your computer.
+    break starts, you're forced to step away from your computer.
 
 -   Breaks occur at inconvenient times.  You never want a break to occur when
-    you're doing something important, like in a meeting or doing a video chat.
+    you're doing something important, like in a meeting or in a video chat.
 
     break-time fixes this by having plugins to detect when you're in a meeting
-    or on a video chat.
+    or in a video chat.
 
 -   There is no warning that a break is coming.  With other solutions, it is
     frustrating when a break suddenly occurs in the middle of your work.
 
-    break-time fixes this by having a count-down timer in the systray icon.
-    You get a five-minute heads-up to wrap up any functions you're writing,
+    break-time fixes this by having a countdown timer in the systray icon.
+    You get a five-minute heads-up to wrap up any code you're writing,
     messages you're writing on Slack, documentation you're reading, etc.
 
 break-time is one of the first non-trivial Rust programs I've created,
