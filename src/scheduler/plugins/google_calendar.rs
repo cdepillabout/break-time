@@ -349,4 +349,8 @@ impl Plugin for GoogleCalendar {
             Box::new(google_cal_err) as Box<dyn std::error::Error>
         })
     }
+
+    fn name(&self) -> String {
+        String::from("google_calendar")
+    }
 }

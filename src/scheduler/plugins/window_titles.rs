@@ -334,4 +334,8 @@ impl Plugin for WindowTitles {
         self.can_break()
             .map_err(|()| Box::new(custom_error) as Box<dyn std::error::Error>)
     }
+
+    fn name(&self) -> String {
+        String::from("window_titles")
+    }
 }
