@@ -4,7 +4,7 @@ let
     break-time =
       self.rustPlatform.buildRustPackage rec {
         pname = "break-time";
-        version = "0.1.1";
+        version = "0.1.2";
 
         src = self.nix-gitignore.gitignoreSource [] ./.;
 
@@ -20,7 +20,7 @@ let
           self.wrapGAppsHook
         ];
 
-        cargoSha256 = "0brmgrxhspcpcarm4lvnl95dw2n96r20w736giv18xcg7d5jmgca";
+        cargoSha256 = "08slryr9dnciz4y5hqpfdvjv3g915qgivjdq74qp31z2bvw7jnxr";
       };
   };
 

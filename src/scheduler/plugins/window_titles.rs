@@ -159,34 +159,46 @@ struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
 impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
     fn all() -> Self {
         Self(vec![
+            // Initiating a Slack call
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
                  class_name: &str,
                  class: &str|
                  -> CanBreak {
-                    if class == "Firefox"
-                        && class_name == "Navigator"
-                        && net_wm_name.starts_with("Meet")
-                    {
-                        CanBreak::No
-                    } else {
-                        CanBreak::Yes
-                    }
+                    browser_title_starts_with(
+                        class,
+                        class_name,
+                        net_wm_name,
+                        "Slack | Calling ",
+                    )
                 },
             ),
+            // In a Slack call
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
                  class_name: &str,
                  class: &str|
                  -> CanBreak {
-                    if class == "Chromium-browser"
-                        && class_name == "chromium-browser"
-                        && net_wm_name.starts_with("Meet")
-                    {
-                        CanBreak::No
-                    } else {
-                        CanBreak::Yes
-                    }
+                    browser_title_starts_with(
+                        class,
+                        class_name,
+                        net_wm_name,
+                        "Slack | Slack call ",
+                    )
+                },
+            ),
+            // Google Meet
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    browser_title_starts_with(
+                        class,
+                        class_name,
+                        net_wm_name,
+                        "Meet",
+                    )
                 },
             ),
         ])
@@ -196,6 +208,38 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
         CanBreak::from_bool(self.0.iter().all(|can_break_pred| {
             can_break_pred.can_break(win_props).into_bool()
         }))
+    }
+}
+
+fn is_browser(class: &str, class_name: &str) -> bool {
+    (class == "Chromium-browser" && class_name == "chromium-browser")
+        || (class == "Firefox" && class_name == "Navigator")
+}
+
+fn browser_title_starts_with_raw(
+    class: &str,
+    class_name: &str,
+    net_wm_name: &str,
+    title_starts_with: &str,
+) -> bool {
+    is_browser(class, class_name) && net_wm_name.starts_with(title_starts_with)
+}
+
+fn browser_title_starts_with(
+    class: &str,
+    class_name: &str,
+    net_wm_name: &str,
+    title_starts_with: &str,
+) -> CanBreak {
+    if browser_title_starts_with_raw(
+        class,
+        class_name,
+        net_wm_name,
+        title_starts_with,
+    ) {
+        CanBreak::No
+    } else {
+        CanBreak::Yes
     }
 }
 
