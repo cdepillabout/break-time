@@ -1,4 +1,9 @@
 
+## next
+
+*   Add a window title check for Zoom calls.
+    [#17](https://github.com/cdepillabout/break-time/pull/17)
+
 ## 0.1.2
 
 *   Add a window title check for Slack calls.
