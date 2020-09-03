@@ -201,6 +201,20 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
                     )
                 },
             ),
+            // Zoom
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    if class == "zoom" && class_name == "zoom" && net_wm_name == "Zoom"
+                    {
+                        CanBreak::No
+                    } else {
+                        CanBreak::Yes
+                    }
+                },
+            ),
         ])
     }
 
@@ -253,7 +267,7 @@ struct WinPropCookies<'a> {
     wm_transient_for: xcb::xproto::GetPropertyCookie<'a>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct WinProps {
     wm_name: Result<String, ()>,
     net_wm_name: Result<String, ()>,
