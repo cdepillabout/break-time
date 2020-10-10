@@ -351,9 +351,18 @@ fn filter_cal_events(
 }
 
 fn filter_event(event: &google_calendar3::Event) -> bool {
+    // Ignore events where the description contains the magic string
+    // "ignore break-time"
     if let Some(desc) = &event.description {
         if desc.to_lowercase().contains("ignore break-time") {
             // println!("filtering out event because description ignores break-time: {:?}", event);
+            return false;
+        }
+    }
+
+    // Ignore events where the status is "cancelled"
+    if let Some(status) = &event.status {
+        if status == "cancelled" {
             return false;
         }
     }
