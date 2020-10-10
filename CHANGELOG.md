@@ -5,10 +5,15 @@
     [#17](https://github.com/cdepillabout/break-time/pull/17)
 
 *   For the Google Calendar plugin, ignore events from consideration where the
-    event description contains the string ignore break-time.  This gives a nice
-    way to make sure that break-time continues to force breaks to occur even if
-    you have an event on your google calendar.
+    event description contains the string `ignore break-time`.  This gives a
+    nice way to make sure that break-time continues to force breaks to occur
+    even if you have an event on your google calendar.
     [#19](https://github.com/cdepillabout/break-time/pull/19)
+
+*   For the Google Calendar plugin, ignores events where the status is
+    `cancelled`.  For some reason, sometimes events that become cancelled still
+    show up on your calendar and in responses from the Google Calendar APIs.
+    [#20](https://github.com/cdepillabout/break-time/pull/20)
 
 ## 0.1.2
 
