@@ -331,16 +331,32 @@ fn has_event(
             match events.items {
                 None => Ok(HasEvent::No),
                 Some(event_items) => {
-                    if event_items.is_empty() {
+                    let filtered_events = filter_cal_events(event_items);
+                    if filtered_events.is_empty() {
                         Ok(HasEvent::No)
                     } else {
-                        println!("There were some event items from calendar id {}: {:?}", calendar_id, event_items);
+                        println!("There were some event items from calendar id {}: {:?}", calendar_id, filtered_events);
                         Ok(HasEvent::Yes)
                     }
                 }
             }
         }
     }
+}
+
+fn filter_cal_events(events: Vec<google_calendar3::Event>) -> Vec<google_calendar3::Event> {
+    events.into_iter().filter(filter_event).collect()
+}
+
+fn filter_event(event: &google_calendar3::Event) -> bool {
+    if let Some(desc) = &event.description {
+        if desc.to_lowercase().contains("ignore break-time") {
+            // println!("filtering out event because description ignores break-time: {:?}", event);
+            return false;
+        }
+    }
+
+    true
 }
 
 impl Plugin for GoogleCalendar {

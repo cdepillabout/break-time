@@ -104,6 +104,10 @@ break-time from starting a break.
 This is convenient to stop a break from happening when you're in a meeting at
 work.
 
+This plugin has a feature where if your Google Calendar event has a description
+with the magic string `ignore break-time`, break-time will ignore it when
+considering whether or not to start a break.
+
 This plugin requires some configuration before it can be used.  First, you must
 add your Gmail address to the break-time configuration file,
 `~/.config/break-time/config.toml`.  The `accounts` (or
