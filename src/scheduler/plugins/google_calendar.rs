@@ -344,7 +344,9 @@ fn has_event(
     }
 }
 
-fn filter_cal_events(events: Vec<google_calendar3::Event>) -> Vec<google_calendar3::Event> {
+fn filter_cal_events(
+    events: Vec<google_calendar3::Event>,
+) -> Vec<google_calendar3::Event> {
     events.into_iter().filter(filter_event).collect()
 }
 
