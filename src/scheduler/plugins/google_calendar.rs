@@ -375,7 +375,10 @@ fn filter_event(event: &google_calendar3::Event) -> bool {
 
     // Ignore events where there are attendees, and you are marked as not attending.
     if let Some(attendees) = &event.attendees {
-        if let Some(me) = attendees.iter().find(|attendee| attendee.self_ == Some(true)) {
+        if let Some(me) = attendees
+            .iter()
+            .find(|attendee| attendee.self_ == Some(true))
+        {
             if me.response_status == Some(String::from("declined")) {
                 return false;
             }
