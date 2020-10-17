@@ -15,6 +15,12 @@
     show up on your calendar and in responses from the Google Calendar APIs.
     [#20](https://github.com/cdepillabout/break-time/pull/20)
 
+    Also ignore events where the status is `needsAction`.  Even though you
+    don't participate in an event, the event status stays `needsAction` and
+    doesn't become `cancelled`.  This is worked around by also ignoring events
+    where the status is `needsAction`.
+    [#22](https://github.com/cdepillabout/break-time/pull/22)
+
 ## 0.1.2
 
 *   Add a window title check for Slack calls.
