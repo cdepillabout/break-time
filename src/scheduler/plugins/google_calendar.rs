@@ -366,9 +366,13 @@ fn filter_event(event: &google_calendar3::Event) -> bool {
         }
     }
 
-    // Ignore events where the status is "cancelled"
+    // Ignore events where the status is "cancelled".
+    //
+    // For some reason, sometimes Google Calendar will not set the event status as "cancelled" even
+    // though you have cancelled the event.  It keeps the event status as "needsAction".  Check for
+    // "needsAction" and ignore events with this status as well.
     if let Some(status) = &event.status {
-        if status == "cancelled" {
+        if status == "cancelled" || status == "needsAction" {
             return false;
         }
     }
