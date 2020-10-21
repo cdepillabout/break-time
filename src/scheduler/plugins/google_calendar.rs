@@ -242,6 +242,7 @@ fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
     calendar_ids
 }
 
+/// Check whether or not any events occur during the `start_time` to `end_time`.
 fn has_events(
     email: &str,
     hub: &CalHub,
