@@ -319,6 +319,8 @@ fn has_event(
         // all events that occur over the next 20 minutes
         .time_min(&start_time.to_rfc3339())
         .time_max(&end_time.to_rfc3339())
+        // Expand recurring events into single events.
+        .single_events(true)
         .doit();
 
     // println!("\n\nevents for {}: {:?}", calendar_id, result);
