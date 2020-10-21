@@ -334,7 +334,7 @@ fn has_event(
             match events.items {
                 None => Ok(HasEvent::No),
                 Some(event_items) => {
-                    let filtered_events = filter_cal_events(event_items, start_time, end_time);
+                    let filtered_events = filter_cal_events(event_items);
                     if filtered_events.is_empty() {
                         Ok(HasEvent::No)
                     } else {
@@ -349,13 +349,11 @@ fn has_event(
 
 fn filter_cal_events(
     events: Vec<google_calendar3::Event>,
-    start_time: chrono::DateTime<chrono::Utc>,
-    end_time: chrono::DateTime<chrono::Utc>,
 ) -> Vec<google_calendar3::Event> {
-    events.into_iter().filter(|event| filter_event(event, start_time, end_time)).collect()
+    events.into_iter().filter(filter_event).collect()
 }
 
-fn filter_event(event: &google_calendar3::Event, start_time: chrono::DateTime<chrono::Utc>, end_time: chrono::DateTime<chrono::Utc>) -> bool {
+fn filter_event(event: &google_calendar3::Event) -> bool {
     if let Some(desc) = &event.description {
         // Ignore events where the description contains the magic string
         // "ignore break-time"
@@ -394,38 +392,8 @@ fn filter_event(event: &google_calendar3::Event, start_time: chrono::DateTime<ch
         }
     }
 
-    println!("About to check event start and end time, event: {:?}", event);
-
-    // Ignore events where the event end time is not after our beginning search timespan, and the event
-    // beginning time is not before our ending search timespan.
-    //
-    // When you move weekly repeated events around your calendar, sometimes Google Calendar will get
-    // confused and show an event that has been moved to another day.  The `event.start` and
-    // `event.end` times are set correctly, so we have to check to make sure that the event
-    // actually falls within the time range we are looking for events.
-    if let Some(event_start) = event.start.as_ref().and_then(event_date_time_to_date_time) {
-        if let Some(event_end) = event.end.as_ref().and_then(event_date_time_to_date_time) {
-            if event_start > end_time || event_end < start_time {
-                return false;
-            }
-        }
-    }
-
     true
 }
-
-fn event_date_time_to_date_time(event_date_time: &google_calendar3::EventDateTime) -> Option<chrono::DateTime<chrono::Utc>> {
-    match &event_date_time.date_time {
-        None => None,
-        Some(date_time_str) => {
-            chrono::DateTime::parse_from_rfc3339(date_time_str)
-                .map(|date_time| date_time.with_timezone(&chrono::Utc))
-                .ok()
-        }
-    }
-}
-
-
 
 impl Plugin for GoogleCalendar {
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
