@@ -21,6 +21,12 @@
     where the status is `needsAction`.
     [#22](https://github.com/cdepillabout/break-time/pull/22)
 
+*   For the Google Calendar plugin, treat all events as single events (instead of
+    treating repeated events specially).  This fixes a bug with handling of
+    repeated events.  Sometimes the Google Calendar API would return repeated
+    events in times when it doesn't make sense, but this PR fixes this.
+    [#23](https://github.com/cdepillabout/break-time/pull/23)
+
 ## 0.1.2
 
 *   Add a window title check for Slack calls.
