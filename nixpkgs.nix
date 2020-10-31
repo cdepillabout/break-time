@@ -6,6 +6,9 @@ let
     sha256 = "1cl4ka4kk7kh3bl78g06dhiidazf65q8miyzaxi9930d6gwyzkci";
   };
 
+  # This is a derivation for actually building break-time using the Rust
+  # infrastructure in nixpkgs.  If break-time was upstreamed, something similar
+  # to this could be put directly into nixpkgs.
   break-time-overlay = final: prev: {
     break-time =
       final.rustPlatform.buildRustPackage rec {
@@ -29,6 +32,11 @@ let
         cargoSha256 = "08slryr9dnciz4y5hqpfdvjv3g915qgivjdq74qp31z2bvw7jnxr";
       };
 
+    # This is a development shell.  It should be run with nix-shell.  It
+    # provides rustup, which can be used to install things like cargo, rustc,
+    # clippy, etc.
+    #
+    # This is just for development, and could never be upstreamed
     break-time-shell =
       final.stdenv.mkDerivation {
         name = "break-time-rust-env";
