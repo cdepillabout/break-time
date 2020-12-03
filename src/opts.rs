@@ -32,4 +32,11 @@ pub enum Command {
 #[derive(Debug, StructOpt)]
 pub enum GoogleCalendar {
     ListEvents,
+    IgnoreEvent(IgnoreEvent),
+}
+
+#[derive(Debug, StructOpt)]
+pub struct IgnoreEvent {
+    /// Event ID.  You can get this with `break-time google-calendar list-events`.
+    pub event_id: String
 }

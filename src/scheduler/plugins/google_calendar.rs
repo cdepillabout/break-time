@@ -2,6 +2,7 @@ use super::{CanBreak, Plugin};
 
 use crate::config::{Config, PluginSettings};
 
+use std::collections::HashMap;
 use std::net::TcpListener;
 use std::path::Path;
 
@@ -224,7 +225,7 @@ fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
         .calendar_list()
         .list()
         .add_scope(Scope::Readonly)
-        .add_scope(Scope::EventReadonly)
+        .add_scope(Scope::Event)
         .doit()
         .expect("couldn't get a response from calendar_list");
 
@@ -389,6 +390,17 @@ fn filter_event(event: &google_calendar3::Event) -> bool {
         }
     }
 
+    // Ignore events where the `ignore-break-time` extended property is set.
+    if let Some(extended_props) = &event.extended_properties {
+        if let Some(props) = &extended_props.private {
+            if let Some(ignore_break_time) = props.get("ignore-break-time") {
+                if ignore_break_time == "true" {
+                    return false;
+                }
+            }
+        }
+    }
+
     // Ignore events where the status is "cancelled".
     //
     // For some reason, sometimes Google Calendar will not set the event status as "cancelled" even
@@ -472,4 +484,39 @@ fn get_events(cal_fetcher: &CalFetcher) ->
     }).collect();
 
     events_list
+}
+
+pub fn ignore_event(config: Config, event_id: String) {
+    let google_calendar = GoogleCalendar::new(&config).expect("Could not initialize Google Calendar.");
+
+    // let event_calendar_lists: Vec<_> = google_calendar.fetchers.iter().flat_map(get_events).collect();
+    for fetcher in google_calendar.fetchers {
+        for calendar_id in fetcher.calendar_ids {
+            // We only check calendar_ids that are equal to the email address we are looking for.
+            //
+            // TODO: Eventually, we probably want to let the user configure what email addresses
+            // they want to look for events on.
+            if calendar_id == fetcher.email {
+                let mut props = HashMap::new();
+                props.insert("ignore-break-time".to_string(), "true".to_string());
+                let extended_props = google_calendar3::EventExtendedProperties {
+                    private: Some(props),
+                    ..google_calendar3::EventExtendedProperties::default()
+                };
+                let req = google_calendar3::Event {
+                    extended_properties: Some(extended_props),
+                    ..google_calendar3::Event::default()
+                };
+                let res =
+                    fetcher
+                    .hub
+                    .events()
+                    .patch(req, &calendar_id, &event_id)
+                    .add_scope(Scope::Readonly)
+                    .add_scope(Scope::Event)
+                    .doit();
+                // println!("event_id: {}, calendar_id: {}, res: {:?}", event_id, calendar_id, res);
+            }
+        }
+    }
 }
