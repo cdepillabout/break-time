@@ -73,11 +73,7 @@ fn handle_msg_recv(
     }
 }
 
-pub fn default_main() {
-    let opts = opts::Opts::parse_from_args();
-
-    let config = Config::load(opts).expect("Could not load config file.");
-
+pub fn run(config: Config) {
     gtk::init().expect("Could not initialize GTK");
 
     let (sender, receiver) =
@@ -102,4 +98,31 @@ pub fn default_main() {
     });
 
     gtk::main();
+}
+
+pub fn run_google_calendar_command(
+    config: Config,
+    google_calendar_command: opts::GoogleCalendar,
+) {
+    match google_calendar_command {
+        opts::GoogleCalendar::ListEvents => {
+            scheduler::plugins::google_calendar::list_events(config)
+        }
+        opts::GoogleCalendar::IgnoreEvent(opts::IgnoreEvent { event_id }) => {
+            scheduler::plugins::google_calendar::ignore_event(config, event_id)
+        }
+    }
+}
+
+pub fn default_main() {
+    let opts = opts::Opts::parse_from_args();
+
+    let config = Config::load(&opts).expect("Could not load config file.");
+
+    match opts.cmd {
+        None => run(config),
+        Some(opts::Command::GoogleCalendar(google_calendar_command)) => {
+            run_google_calendar_command(config, google_calendar_command)
+        }
+    }
 }

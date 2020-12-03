@@ -2,6 +2,7 @@ use super::{CanBreak, Plugin};
 
 use crate::config::{Config, PluginSettings};
 
+use std::collections::HashMap;
 use std::net::TcpListener;
 use std::path::Path;
 
@@ -120,7 +121,7 @@ fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
 
     let all_emails = all_accounts.clone().try_into().map_err(|_err| ());
 
-    println!("All emails: {:?}", all_emails);
+    // println!("All emails: {:?}", all_emails);
 
     all_emails
 }
@@ -224,7 +225,7 @@ fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
         .calendar_list()
         .list()
         .add_scope(Scope::Readonly)
-        .add_scope(Scope::EventReadonly)
+        .add_scope(Scope::Event)
         .doit()
         .expect("couldn't get a response from calendar_list");
 
@@ -305,12 +306,14 @@ impl std::fmt::Display for GoogleCalErr {
     }
 }
 
-fn has_event(
+fn get_event(
     hub: &CalHub,
     calendar_id: &str,
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: chrono::DateTime<chrono::Utc>,
-) -> Result<HasEvent, GoogleCalErr> {
+    // This is super hacky...
+    log: bool,
+) -> Result<Vec<google_calendar3::Event>, GoogleCalErr> {
     let result: google_calendar3::Result<(_, Events)> = hub
         .events()
         .list(calendar_id)
@@ -330,21 +333,38 @@ fn has_event(
             calendar_id: String::from(calendar_id),
             google_cal_err: err,
         }),
-        Ok((_, events)) => {
-            match events.items {
-                None => Ok(HasEvent::No),
-                Some(event_items) => {
-                    let filtered_events = filter_cal_events(event_items);
-                    if filtered_events.is_empty() {
-                        Ok(HasEvent::No)
-                    } else {
+        Ok((_, events)) => match events.items {
+            None => Ok(vec![]),
+            Some(event_items) => {
+                let filtered_events: Vec<google_calendar3::Event> =
+                    filter_cal_events(event_items);
+                if filtered_events.is_empty() {
+                    Ok(filtered_events)
+                } else {
+                    if log {
                         println!("There were some event items from calendar id {}: {:?}", calendar_id, filtered_events);
-                        Ok(HasEvent::Yes)
                     }
+                    Ok(filtered_events)
                 }
             }
-        }
+        },
     }
+}
+
+fn has_event(
+    hub: &CalHub,
+    calendar_id: &str,
+    start_time: chrono::DateTime<chrono::Utc>,
+    end_time: chrono::DateTime<chrono::Utc>,
+) -> Result<HasEvent, GoogleCalErr> {
+    let event_res = get_event(hub, calendar_id, start_time, end_time, true);
+    event_res.map(|filtered_events| {
+        if filtered_events.is_empty() {
+            HasEvent::No
+        } else {
+            HasEvent::Yes
+        }
+    })
 }
 
 fn filter_cal_events(
@@ -366,6 +386,17 @@ fn filter_event(event: &google_calendar3::Event) -> bool {
         // want break-time to occassionally break.
         if desc.to_lowercase().contains("out-of-office event") {
             return false;
+        }
+    }
+
+    // Ignore events where the `ignore-break-time` extended property is set.
+    if let Some(extended_props) = &event.extended_properties {
+        if let Some(props) = &extended_props.private {
+            if let Some(ignore_break_time) = props.get("ignore-break-time") {
+                if ignore_break_time == "true" {
+                    return false;
+                }
+            }
         }
     }
 
@@ -404,5 +435,114 @@ impl Plugin for GoogleCalendar {
 
     fn name(&self) -> String {
         String::from("google_calendar")
+    }
+}
+
+pub fn list_events(config: Config) {
+    let google_calendar = GoogleCalendar::new(&config)
+        .expect("Could not initialize Google Calendar.");
+
+    let event_calendar_lists: Vec<_> = google_calendar
+        .fetchers
+        .iter()
+        .flat_map(get_events)
+        .collect();
+
+    for (email, res_event_list) in event_calendar_lists {
+        println!("{}:", email);
+        match res_event_list {
+            Err(err) => {
+                println!("ERROR with Google Calendar: {}", err);
+            }
+            Ok(event_list) => {
+                for event in event_list {
+                    println!(
+                        "    - id: {:?}, summary: {:?}",
+                        event.id, event.summary
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn get_events(
+    cal_fetcher: &CalFetcher,
+) -> Vec<(String, Result<Vec<google_calendar3::Event>, GoogleCalErr>)> {
+    let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
+    let ten_minutes_ago: chrono::DateTime<chrono::Utc> =
+        now - chrono::Duration::minutes(10);
+    let in_twenty_mins: chrono::DateTime<chrono::Utc> =
+        now + chrono::Duration::minutes(20);
+    let start_time = ten_minutes_ago;
+    let end_time = in_twenty_mins;
+
+    let events_list: Vec<(
+        String,
+        Result<Vec<google_calendar3::Event>, GoogleCalErr>,
+    )> = cal_fetcher
+        .calendar_ids
+        .iter()
+        .filter_map(|calendar_id| {
+            // We only check calendar_ids that are equal to the email address we are looking for.
+            //
+            // TODO: Eventually, we probably want to let the user configure what email addresses
+            // they want to look for events on.
+            if &cal_fetcher.email == calendar_id {
+                Some((
+                    String::from(calendar_id),
+                    get_event(
+                        &cal_fetcher.hub,
+                        calendar_id,
+                        start_time,
+                        end_time,
+                        false,
+                    ),
+                ))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    events_list
+}
+
+pub fn ignore_event(config: Config, event_id: String) {
+    let google_calendar = GoogleCalendar::new(&config)
+        .expect("Could not initialize Google Calendar.");
+
+    // let event_calendar_lists: Vec<_> = google_calendar.fetchers.iter().flat_map(get_events).collect();
+    for fetcher in google_calendar.fetchers {
+        for calendar_id in fetcher.calendar_ids {
+            // We only check calendar_ids that are equal to the email address we are looking for.
+            //
+            // TODO: Eventually, we probably want to let the user configure what email addresses
+            // they want to look for events on.
+            if calendar_id == fetcher.email {
+                let mut props = HashMap::new();
+                props.insert(
+                    "ignore-break-time".to_string(),
+                    "true".to_string(),
+                );
+                let extended_props =
+                    google_calendar3::EventExtendedProperties {
+                        private: Some(props),
+                        ..google_calendar3::EventExtendedProperties::default()
+                    };
+                let req = google_calendar3::Event {
+                    extended_properties: Some(extended_props),
+                    ..google_calendar3::Event::default()
+                };
+                let res = fetcher
+                    .hub
+                    .events()
+                    .patch(req, &calendar_id, &event_id)
+                    .add_scope(Scope::Readonly)
+                    .add_scope(Scope::Event)
+                    .doit();
+                // println!("event_id: {}, calendar_id: {}, res: {:?}", event_id, calendar_id, res);
+            }
+        }
     }
 }

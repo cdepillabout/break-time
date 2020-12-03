@@ -27,6 +27,27 @@
     events in times when it doesn't make sense, but this PR fixes this.
     [#23](https://github.com/cdepillabout/break-time/pull/23)
 
+*   Add two command line commands: `google-calendar list-events` and
+    `google-calendar ignore-event`.
+
+    `google-calendar list-events` lists all the Google Calendar events that are
+    occurring right now that will cause break-time to ignore a scheduled break
+    time.
+
+    ```console
+    $ break-time google-calendar list-events
+    me@my-email.com:
+    - id: Some("123phhhlpppoohh88hhcl9988b"), summary: Some("Some test event")
+    ```
+
+    You can take these events and pass them to the `ignore-event` command to
+    set a property on an event that will cause `break-time` to ignore it when
+    it is trying to figure out whether or not it can break.
+
+    ```console
+    $ break-time google-calendar ignore-event "123phhhlpppoohh88hhcl9988b"
+    ```
+
 ## 0.1.2
 
 *   Add a window title check for Slack calls.
