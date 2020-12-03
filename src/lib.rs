@@ -73,11 +73,7 @@ fn handle_msg_recv(
     }
 }
 
-pub fn default_main() {
-    let opts = opts::Opts::parse_from_args();
-
-    let config = Config::load(opts).expect("Could not load config file.");
-
+pub fn run(config: Config) {
     gtk::init().expect("Could not initialize GTK");
 
     let (sender, receiver) =
@@ -102,4 +98,15 @@ pub fn default_main() {
     });
 
     gtk::main();
+}
+
+pub fn default_main() {
+    let opts = opts::Opts::parse_from_args();
+
+    let config = Config::load(&opts).expect("Could not load config file.");
+
+    match opts.cmd {
+        None => run(config),
+        Some(opts::Command::GoogleCalendar(opts::GoogleCalendar::ListEvents)) => scheduler::plugins::google_calendar::list_events(config),
+    }
 }

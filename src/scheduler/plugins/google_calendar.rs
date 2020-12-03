@@ -120,7 +120,7 @@ fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
 
     let all_emails = all_accounts.clone().try_into().map_err(|_err| ());
 
-    println!("All emails: {:?}", all_emails);
+    // println!("All emails: {:?}", all_emails);
 
     all_emails
 }
@@ -305,12 +305,14 @@ impl std::fmt::Display for GoogleCalErr {
     }
 }
 
-fn has_event(
+fn get_event(
     hub: &CalHub,
     calendar_id: &str,
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: chrono::DateTime<chrono::Utc>,
-) -> Result<HasEvent, GoogleCalErr> {
+    // This is super hacky...
+    log: bool
+) -> Result<Vec<google_calendar3::Event>, GoogleCalErr> {
     let result: google_calendar3::Result<(_, Events)> = hub
         .events()
         .list(calendar_id)
@@ -332,19 +334,37 @@ fn has_event(
         }),
         Ok((_, events)) => {
             match events.items {
-                None => Ok(HasEvent::No),
+                None => Ok(vec![]),
                 Some(event_items) => {
-                    let filtered_events = filter_cal_events(event_items);
+                    let filtered_events: Vec<google_calendar3::Event> = filter_cal_events(event_items);
                     if filtered_events.is_empty() {
-                        Ok(HasEvent::No)
+                        Ok(filtered_events)
                     } else {
-                        println!("There were some event items from calendar id {}: {:?}", calendar_id, filtered_events);
-                        Ok(HasEvent::Yes)
+                        if log {
+                            println!("There were some event items from calendar id {}: {:?}", calendar_id, filtered_events);
+                        }
+                        Ok(filtered_events)
                     }
                 }
             }
         }
     }
+}
+
+fn has_event(
+    hub: &CalHub,
+    calendar_id: &str,
+    start_time: chrono::DateTime<chrono::Utc>,
+    end_time: chrono::DateTime<chrono::Utc>,
+) -> Result<HasEvent, GoogleCalErr> {
+    let event_res = get_event(hub, calendar_id, start_time, end_time, true);
+    event_res.map(|filtered_events| {
+        if filtered_events.is_empty() {
+          HasEvent::No
+        } else {
+          HasEvent::Yes
+        }
+    })
 }
 
 fn filter_cal_events(
@@ -405,4 +425,51 @@ impl Plugin for GoogleCalendar {
     fn name(&self) -> String {
         String::from("google_calendar")
     }
+}
+
+
+pub fn list_events(config: Config) {
+    let google_calendar = GoogleCalendar::new(&config).expect("Could not initialize Google Calendar.");
+
+    let event_calendar_lists: Vec<_> = google_calendar.fetchers.iter().flat_map(get_events).collect();
+
+    for (email, res_event_list) in event_calendar_lists {
+        println!("{}:", email);
+        match res_event_list {
+            Err(err) => {
+                println!("ERROR with Google Calendar: {}", err);
+            }
+            Ok(event_list) => {
+                for event in event_list {
+
+                    println!("    - id: {:?}, summary: {:?}", event.id, event.summary);
+                }
+            }
+        }
+    }
+}
+
+fn get_events(cal_fetcher: &CalFetcher) ->
+  Vec<(String, Result<Vec<google_calendar3::Event>, GoogleCalErr>)> {
+    let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now();
+    let ten_minutes_ago: chrono::DateTime<chrono::Utc> =
+        now - chrono::Duration::minutes(10);
+    let in_twenty_mins: chrono::DateTime<chrono::Utc> =
+        now + chrono::Duration::minutes(20);
+    let start_time = ten_minutes_ago;
+    let end_time = in_twenty_mins;
+
+    let events_list: Vec<(String, Result<Vec<google_calendar3::Event>, GoogleCalErr>)> = cal_fetcher.calendar_ids.iter().filter_map(|calendar_id| {
+        // We only check calendar_ids that are equal to the email address we are looking for.
+        //
+        // TODO: Eventually, we probably want to let the user configure what email addresses
+        // they want to look for events on.
+        if &cal_fetcher.email == calendar_id {
+            Some((String::from(calendar_id), get_event(&cal_fetcher.hub, calendar_id, start_time, end_time, false)))
+        } else {
+            None
+        }
+    }).collect();
+
+    events_list
 }

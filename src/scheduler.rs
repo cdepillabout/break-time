@@ -1,7 +1,7 @@
 // This code is pretty horrible.  I am sorry.
 
 mod idle_detector;
-mod plugins;
+pub mod plugins;
 
 use super::config::Config;
 use idle_detector::IdleDetector;

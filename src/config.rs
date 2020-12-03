@@ -92,9 +92,9 @@ pub struct Config {
 
 impl Config {
     // TODO: Change some of the panics in this function to returning errors.
-    pub fn load(opts: Opts) -> Result<Self, ()> {
+    pub fn load(opts: &Opts) -> Result<Self, ()> {
         let config_file_name = "config.toml";
-        let config_file_path = match opts.conf_dir {
+        let config_file_path = match &opts.conf_dir {
             Some(conf_dir) => {
                 std::fs::create_dir_all(&conf_dir).map_err(|_io_err| ())?;
                 conf_dir.join(config_file_name)
@@ -109,8 +109,8 @@ impl Config {
             }
         };
 
-        let cache_dir = match opts.cache_dir {
-            Some(cache_dir) => cache_dir,
+        let cache_dir = match &opts.cache_dir {
+            Some(cache_dir) => cache_dir.clone(),
             None => {
                 let xdg_base_dir =
                     xdg::BaseDirectories::with_prefix("break-time")

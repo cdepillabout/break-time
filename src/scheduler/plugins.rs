@@ -1,4 +1,4 @@
-mod google_calendar;
+pub mod google_calendar;
 mod window_titles;
 
 pub use google_calendar::GoogleCalendar;
