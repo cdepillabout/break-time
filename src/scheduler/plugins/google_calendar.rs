@@ -534,7 +534,7 @@ pub fn ignore_event(config: Config, event_id: String) {
                     extended_properties: Some(extended_props),
                     ..google_calendar3::Event::default()
                 };
-                let res = fetcher
+                let _res = fetcher
                     .hub
                     .events()
                     .patch(req, &calendar_id, &event_id)
