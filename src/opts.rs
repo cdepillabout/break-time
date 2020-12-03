@@ -15,7 +15,7 @@ pub struct Opts {
     pub cache_dir: Option<PathBuf>,
 
     #[structopt(subcommand)]
-    pub cmd: Option<Command>
+    pub cmd: Option<Command>,
 }
 
 impl Opts {
@@ -38,5 +38,5 @@ pub enum GoogleCalendar {
 #[derive(Debug, StructOpt)]
 pub struct IgnoreEvent {
     /// Event ID.  You can get this with `break-time google-calendar list-events`.
-    pub event_id: String
+    pub event_id: String,
 }

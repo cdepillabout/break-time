@@ -100,10 +100,17 @@ pub fn run(config: Config) {
     gtk::main();
 }
 
-pub fn run_google_calendar_command(config: Config, google_calendar_command: opts::GoogleCalendar) {
+pub fn run_google_calendar_command(
+    config: Config,
+    google_calendar_command: opts::GoogleCalendar,
+) {
     match google_calendar_command {
-        opts::GoogleCalendar::ListEvents => scheduler::plugins::google_calendar::list_events(config),
-        opts::GoogleCalendar::IgnoreEvent(opts::IgnoreEvent{event_id}) => scheduler::plugins::google_calendar::ignore_event(config, event_id)
+        opts::GoogleCalendar::ListEvents => {
+            scheduler::plugins::google_calendar::list_events(config)
+        }
+        opts::GoogleCalendar::IgnoreEvent(opts::IgnoreEvent { event_id }) => {
+            scheduler::plugins::google_calendar::ignore_event(config, event_id)
+        }
     }
 }
 
@@ -114,6 +121,8 @@ pub fn default_main() {
 
     match opts.cmd {
         None => run(config),
-        Some(opts::Command::GoogleCalendar(google_calendar_command)) => run_google_calendar_command(config, google_calendar_command),
+        Some(opts::Command::GoogleCalendar(google_calendar_command)) => {
+            run_google_calendar_command(config, google_calendar_command)
+        }
     }
 }
