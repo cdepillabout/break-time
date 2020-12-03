@@ -318,7 +318,7 @@ fn get_event(
         .events()
         .list(calendar_id)
         .add_scope(Scope::Readonly)
-        .add_scope(Scope::EventReadonly)
+        .add_scope(Scope::Event)
         // all events that occur over the next 20 minutes
         .time_min(&start_time.to_rfc3339())
         .time_max(&end_time.to_rfc3339())
