@@ -217,6 +217,22 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
                     }
                 },
             ),
+            // Skype
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    if class == "Skype"
+                        && class_name == "skype"
+                        && net_wm_name == "Skype"
+                    {
+                        CanBreak::No
+                    } else {
+                        CanBreak::Yes
+                    }
+                },
+            ),
         ])
     }
 
