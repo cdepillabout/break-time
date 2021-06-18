@@ -1,9 +1,9 @@
 
 let
   nixpkgsSrc = builtins.fetchTarball {
-    # nixpkgs-20.09 as of 2020-10-31
-    url = https://github.com/NixOS/nixpkgs/archive/edb26126d98bc696f4f3e206583faa65d3d6e818.tar.gz;
-    sha256 = "1cl4ka4kk7kh3bl78g06dhiidazf65q8miyzaxi9930d6gwyzkci";
+    # nixpkgs-21.05 as of 2021-06-05
+    url = https://github.com/NixOS/nixpkgs/archive/4c2e84394c0f372c019e941e95d6fbe21835719b.tar.gz;
+    sha256 = "099f5cgjrmkqbgdlhynghbbr32jlxr0fqigqfg2w421gk9vkhp4d";
   };
 
   # This is a derivation for actually building break-time using the Rust
@@ -29,7 +29,7 @@ let
           wrapGAppsHook
         ];
 
-        cargoSha256 = "08slryr9dnciz4y5hqpfdvjv3g915qgivjdq74qp31z2bvw7jnxr";
+        cargoSha256 = "0q6xdsd2bxc6y7d1f4c7i1a2fsh0wqmpxvp8397zmdqnqaszk58f";
       };
 
     # This is a development shell.  It should be run with nix-shell.  It
