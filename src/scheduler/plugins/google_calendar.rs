@@ -334,17 +334,19 @@ fn get_event(
             calendar_id: String::from(calendar_id),
             google_cal_err: err,
         }),
-        Ok((_, events)) => match events.items {
-            None => Ok(vec![]),
-            Some(event_items) => {
-                let filtered_events: Vec<google_calendar3::Event> =
-                    filter_cal_events(event_items);
-                if !filtered_events.is_empty() && log {
-                    println!("There were some event items from calendar id {}: {:?}", calendar_id, filtered_events);
+        Ok((_, events)) => {
+            match events.items {
+                None => Ok(vec![]),
+                Some(event_items) => {
+                    let filtered_events: Vec<google_calendar3::Event> =
+                        filter_cal_events(event_items);
+                    if !filtered_events.is_empty() && log {
+                        println!("There were some event items from calendar id {}: {:?}", calendar_id, filtered_events);
+                    }
+                    Ok(filtered_events)
                 }
-                Ok(filtered_events)
             }
-        },
+        }
     }
 }
 

@@ -109,7 +109,9 @@ pub fn run_google_calendar_command(
             scheduler::plugins::google_calendar::list_events(&config)
         }
         opts::GoogleCalendar::IgnoreEvent(opts::IgnoreEvent { event_id }) => {
-            scheduler::plugins::google_calendar::ignore_event(&config, &event_id)
+            scheduler::plugins::google_calendar::ignore_event(
+                &config, &event_id,
+            )
         }
     }
 }
