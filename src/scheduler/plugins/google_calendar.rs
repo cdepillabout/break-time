@@ -339,14 +339,10 @@ fn get_event(
             Some(event_items) => {
                 let filtered_events: Vec<google_calendar3::Event> =
                     filter_cal_events(event_items);
-                if filtered_events.is_empty() {
-                    Ok(filtered_events)
-                } else {
-                    if log {
-                        println!("There were some event items from calendar id {}: {:?}", calendar_id, filtered_events);
-                    }
-                    Ok(filtered_events)
+                if !filtered_events.is_empty() && log {
+                    println!("There were some event items from calendar id {}: {:?}", calendar_id, filtered_events);
                 }
+                Ok(filtered_events)
             }
         },
     }
