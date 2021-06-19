@@ -29,14 +29,14 @@ where
 
     let f: Box<F> = Box::new(f);
     let raw_f: *mut F = Box::into_raw(f);
-    let signal_name = b"activate\0".as_ptr() as *const std::os::raw::c_char;
+    let signal_name = b"activate\0".as_ptr().cast::<std::os::raw::c_char>();
 
     unsafe {
         let raw_trampoline: unsafe extern "C" fn() =
             std::mem::transmute(trampoline::<F> as usize);
 
         glib::signal::connect_raw(
-            status_icon as *mut gobject_sys::GObject,
+            status_icon.cast::<gobject_sys::GObject>(),
             signal_name,
             Some(raw_trampoline),
             raw_f,
@@ -65,14 +65,14 @@ where
 
     let f: Box<F> = Box::new(f);
     let raw_f: *mut F = Box::into_raw(f);
-    let signal_name = b"popup-menu\0".as_ptr() as *const std::os::raw::c_char;
+    let signal_name = b"popup-menu\0".as_ptr().cast::<std::os::raw::c_char>();
 
     unsafe {
         let raw_trampoline: unsafe extern "C" fn() =
             std::mem::transmute(trampoline::<F> as usize);
 
         glib::signal::connect_raw(
-            status_icon as *mut gobject_sys::GObject,
+            status_icon.cast::<gobject_sys::GObject>(),
             signal_name,
             Some(raw_trampoline),
             raw_f,
@@ -86,7 +86,7 @@ pub fn signal_handler_disconnect(
 ) {
     unsafe {
         gobject_sys::g_signal_handler_disconnect(
-            status_icon as *mut gobject_sys::GObject,
+            status_icon.cast::<gobject_sys::GObject>(),
             handler_id.to_glib(),
         );
     }

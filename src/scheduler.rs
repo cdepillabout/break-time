@@ -186,9 +186,8 @@ impl Scheduler {
                                     println!("Scheduler realized it was able to break, so sending a message.");
                                     self.sender.send(super::Msg::StartBreak).expect("TODO: figure out what to do about channels potentially failing");
                                     return WaitUntilBreakResult::FinishedWaiting;
-                                } else {
-                                    println!("Could not break right now, so sleeping again...");
                                 }
+                                println!("Could not break right now, so sleeping again...");
                             }
                         }
                     } else {

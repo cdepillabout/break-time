@@ -6,7 +6,7 @@ pub trait BuilderExtManualGetObjectExpect {
     ) -> T;
 }
 
-impl<U: gtk::prelude::BuilderExtManual> BuilderExtManualGetObjectExpect for U
+impl<U> BuilderExtManualGetObjectExpect for U
 where
     U: gtk::prelude::BuilderExtManual,
 {

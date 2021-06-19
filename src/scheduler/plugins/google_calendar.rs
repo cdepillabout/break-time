@@ -98,6 +98,7 @@ const GOOGLE_CLIENT_SECRET: &str = "mI7MmEnboy8jdYEBjK9rZ2M2";
 
 // TODO: Create a datatype to hold all the settings for the GoogleCalendar plugin.
 // Don't try parsing it out manually here.
+#[allow(clippy::let_and_return)]
 fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
     let google_cal_settings: &toml::Value =
         match plugin_settings.0.get("google_calendar") {
@@ -438,8 +439,8 @@ impl Plugin for GoogleCalendar {
     }
 }
 
-pub fn list_events(config: Config) {
-    let google_calendar = GoogleCalendar::new(&config)
+pub fn list_events(config: &Config) {
+    let google_calendar = GoogleCalendar::new(config)
         .expect("Could not initialize Google Calendar.");
 
     let event_calendar_lists: Vec<_> = google_calendar
@@ -508,8 +509,8 @@ fn get_events(
     events_list
 }
 
-pub fn ignore_event(config: Config, event_id: String) {
-    let google_calendar = GoogleCalendar::new(&config)
+pub fn ignore_event(config: &Config, event_id: &str) {
+    let google_calendar = GoogleCalendar::new(config)
         .expect("Could not initialize Google Calendar.");
 
     // let event_calendar_lists: Vec<_> = google_calendar.fetchers.iter().flat_map(get_events).collect();
@@ -537,7 +538,7 @@ pub fn ignore_event(config: Config, event_id: String) {
                 let _res = fetcher
                     .hub
                     .events()
-                    .patch(req, &calendar_id, &event_id)
+                    .patch(req, &calendar_id, event_id)
                     .add_scope(Scope::Readonly)
                     .add_scope(Scope::Event)
                     .doit();

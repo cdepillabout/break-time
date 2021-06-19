@@ -11,14 +11,14 @@ pub enum CanBreak {
 }
 
 impl CanBreak {
-    pub fn into_bool(self) -> bool {
+    pub const fn into_bool(self) -> bool {
         match self {
             Self::Yes => true,
             Self::No => false,
         }
     }
 
-    pub fn from_bool(b: bool) -> Self {
+    pub const fn from_bool(b: bool) -> Self {
         if b {
             Self::Yes
         } else {
@@ -26,7 +26,7 @@ impl CanBreak {
         }
     }
 
-    pub fn combine(self, other: Self) -> Self {
+    pub const fn combine(self, other: Self) -> Self {
         match (self, other) {
             (Self::No, _) => Self::No,
             (_, Self::No) => Self::No,
