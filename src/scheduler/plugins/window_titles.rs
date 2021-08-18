@@ -159,34 +159,6 @@ struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
 impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
     fn all() -> Self {
         Self(vec![
-            // Initiating a Slack call
-            CanBreakPred::from_name_class(
-                |net_wm_name: &str,
-                 class_name: &str,
-                 class: &str|
-                 -> CanBreak {
-                    browser_title_starts_with(
-                        class,
-                        class_name,
-                        net_wm_name,
-                        "Slack | Calling ",
-                    )
-                },
-            ),
-            // In a Slack call
-            CanBreakPred::from_name_class(
-                |net_wm_name: &str,
-                 class_name: &str,
-                 class: &str|
-                 -> CanBreak {
-                    browser_title_starts_with(
-                        class,
-                        class_name,
-                        net_wm_name,
-                        "Slack | Slack call ",
-                    )
-                },
-            ),
             // Google Meet
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
@@ -201,20 +173,46 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
                     )
                 },
             ),
-            // Zoom
+            // Jitsi
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
                  class_name: &str,
                  class: &str|
                  -> CanBreak {
-                    if class == "zoom"
-                        && class_name == "zoom"
-                        && net_wm_name == "Zoom"
-                    {
-                        CanBreak::No
-                    } else {
-                        CanBreak::Yes
-                    }
+                    browser_title_contains(
+                        class,
+                        class_name,
+                        net_wm_name,
+                        "Jitsi Meet",
+                    )
+                },
+            ),
+            // Slack: Initiating a Slack call
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    browser_title_starts_with(
+                        class,
+                        class_name,
+                        net_wm_name,
+                        "Slack | Calling ",
+                    )
+                },
+            ),
+            // Slack: In a Slack call
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    browser_title_starts_with(
+                        class,
+                        class_name,
+                        net_wm_name,
+                        "Slack | Slack call ",
+                    )
                 },
             ),
             // Skype
@@ -226,6 +224,22 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
                     if class == "Skype"
                         && class_name == "skype"
                         && net_wm_name == "Skype"
+                    {
+                        CanBreak::No
+                    } else {
+                        CanBreak::Yes
+                    }
+                },
+            ),
+            // Zoom
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    if class == "zoom"
+                        && class_name == "zoom"
+                        && net_wm_name == "Zoom"
                     {
                         CanBreak::No
                     } else {
@@ -268,6 +282,33 @@ fn browser_title_starts_with(
         class_name,
         net_wm_name,
         title_starts_with,
+    ) {
+        CanBreak::No
+    } else {
+        CanBreak::Yes
+    }
+}
+
+fn browser_title_contains_raw(
+    class: &str,
+    class_name: &str,
+    net_wm_name: &str,
+    title_contains: &str,
+) -> bool {
+    is_browser(class, class_name) && net_wm_name.contains(title_contains)
+}
+
+fn browser_title_contains(
+    class: &str,
+    class_name: &str,
+    net_wm_name: &str,
+    title_contains: &str,
+) -> CanBreak {
+    if browser_title_contains_raw(
+        class,
+        class_name,
+        net_wm_name,
+        title_contains,
     ) {
         CanBreak::No
     } else {
