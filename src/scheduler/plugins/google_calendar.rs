@@ -252,7 +252,7 @@ fn has_events(
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: chrono::DateTime<chrono::Utc>,
 ) -> Result<HasEvent, GoogleCalErr> {
-    let all_has_events: Vec<Result<HasEvent, GoogleCalErr>> = calendar_ids
+    calendar_ids
         .iter()
         .map(|calendar_id| {
             // We only check calendar_ids that are equal to the email address we are looking for.
@@ -265,10 +265,6 @@ fn has_events(
                 Ok(HasEvent::No)
             }
         })
-        .collect();
-
-    all_has_events
-        .into_iter()
         .fold(Ok(HasEvent::No), |accum, res| match (accum, res) {
             (Err(err), _) => Err(err),
             (_, Err(err)) => Err(err),
