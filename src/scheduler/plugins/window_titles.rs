@@ -159,7 +159,21 @@ struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
 impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
     fn all() -> Self {
         Self(vec![
-            // Google Meet
+            // BigBlueButton in browser
+            CanBreakPred::from_name_class(
+                |net_wm_name: &str,
+                 class_name: &str,
+                 class: &str|
+                 -> CanBreak {
+                    browser_title_starts_with(
+                        class,
+                        class_name,
+                        net_wm_name,
+                        "BigBlueButton",
+                    )
+                },
+            ),
+            // Google Meet in browser
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
                  class_name: &str,
@@ -173,7 +187,7 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
                     )
                 },
             ),
-            // Jitsi
+            // Jitsi in browser
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
                  class_name: &str,
@@ -187,7 +201,7 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
                     )
                 },
             ),
-            // Slack: Initiating a Slack call
+            // Slack: Initiating a Slack call in browser
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
                  class_name: &str,
@@ -201,7 +215,7 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
                     )
                 },
             ),
-            // Slack: In a Slack call
+            // Slack: In a Slack call in browser
             CanBreakPred::from_name_class(
                 |net_wm_name: &str,
                  class_name: &str,
