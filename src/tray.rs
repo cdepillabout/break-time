@@ -24,7 +24,7 @@ where
         G: Fn(*mut gtk_sys::GtkStatusIcon) + 'static,
     {
         let g: &G = &*(g as *const G);
-        g(this)
+        g(this);
     }
 
     let f: Box<F> = Box::new(f);
@@ -60,7 +60,7 @@ where
         G: Fn(*mut gtk_sys::GtkStatusIcon, u32, u32) + 'static,
     {
         let g: &G = &*(g as *const G);
-        g(this, button, activate_time)
+        g(this, button, activate_time);
     }
 
     let f: Box<F> = Box::new(f);
@@ -157,7 +157,7 @@ impl Tray {
     }
 
     pub fn render_break_starting(&self) {
-        self.render_normal_icon()
+        self.render_normal_icon();
     }
 
     fn render_pause_icon(&self) {
@@ -264,7 +264,7 @@ impl Tray {
                         pause_item.connect_activate(move |_| {
                             sender_clone
                                 .send(Msg::Pause)
-                                .expect("Could not send Msg::Pause")
+                                .expect("Could not send Msg::Pause");
                         });
                         menu.append(&pause_item);
                     }
@@ -275,7 +275,7 @@ impl Tray {
                         resume_item.connect_activate(move |_| {
                             sender_clone
                                 .send(Msg::Resume)
-                                .expect("Could not send Msg::Resume")
+                                .expect("Could not send Msg::Resume");
                         });
                         menu.append(&resume_item);
                     }
@@ -286,7 +286,7 @@ impl Tray {
                 quit_item.connect_activate(move |_| {
                     sender_clone
                         .send(Msg::Quit)
-                        .expect("Could not send Msg::Quit")
+                        .expect("Could not send Msg::Quit");
                 });
                 menu.append(&quit_item);
 
