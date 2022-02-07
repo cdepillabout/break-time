@@ -15,6 +15,7 @@
 // - https://github.com/freedesktop/xorg-xserver/blob/7f962c70b6d9c346477f23f6c15211e749110078/Xext/sync.c
 
 use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
 use super::InnerMsg;
@@ -49,6 +50,7 @@ impl IdleDetector {
 
     pub fn run(
         config: &Config,
+        idle_detection_enabled: Arc<Mutex<bool>>,
         restart_wait_time_sender: Sender<InnerMsg>,
     ) -> ! {
         let idle_detector = Self::new(restart_wait_time_sender);
@@ -90,17 +92,29 @@ impl IdleDetector {
                 idle_detection_milliseconds,
             );
 
+            let use_idle_detection =
+            {
+                *idle_detection_enabled.lock().unwrap()
+            };
+
             if has_been_idle(
                 idle_detection_milliseconds.into(),
                 ms_since_user_input.into(),
                 suspend_milliseconds,
             ) {
-                println!(
-                    "idle detector detected that we have been idle, so sending HasBeenIdle message",
-                );
-                idle_detector
-                    .restart_wait_time_sender
-                    .send(InnerMsg::HasBeenIdle).expect("TODO: figure out what to do about channels potentially failing");
+                if use_idle_detection {
+                    println!(
+                        "idle detector detected that we have been idle, so sending HasBeenIdle message",
+                    );
+                    idle_detector
+                        .restart_wait_time_sender
+                        .send(InnerMsg::HasBeenIdle).expect("TODO: figure out what to do about channels potentially failing");
+                }
+                else {
+                    println!(
+                        "idle detector detected that we have been idle, but idle_detection is not enable, so not sending HasBeenIdle message",
+                    );
+                }
             }
         }
     }

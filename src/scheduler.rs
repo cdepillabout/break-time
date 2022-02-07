@@ -8,6 +8,7 @@ use idle_detector::IdleDetector;
 use plugins::{CanBreak, Plugin};
 
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]
@@ -77,7 +78,7 @@ enum State {
 }
 
 pub struct Scheduler {
-    idle_detection_enabled: bool,
+    idle_detection_enabled: Arc<Mutex<bool>>,
     sender: glib::Sender<super::Msg>,
     plugins: Plugins,
     time_until_break: Duration,
@@ -94,12 +95,13 @@ enum WaitUntilBreakResult {
 impl Scheduler {
     pub fn new(
         config: &Config,
+        idle_detection_enabled: Arc<Mutex<bool>>,
         sender: glib::Sender<super::Msg>,
         break_ending_receiver: Receiver<Msg>,
         restart_wait_time_receiver: Receiver<InnerMsg>,
     ) -> Result<Self, ()> {
         Ok(Self {
-            idle_detection_enabled: config.settings.idle_detection_enabled,
+            idle_detection_enabled,
             sender,
             plugins: Plugins::new(&config)?,
             time_until_break: Duration::from_secs(
@@ -119,10 +121,13 @@ impl Scheduler {
             channel();
         let (restart_wait_time_sender, restart_wait_time_receiver) = channel();
         let config_clone = config.clone();
+        let idle_detection_enabled = Arc::new(Mutex::new(config.settings.idle_detection_enabled));
+        let idle_detection_enabled_clone = idle_detection_enabled.clone();
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
             let mut sched = Self::new(
                 &config_clone,
+                idle_detection_enabled_clone,
                 sender,
                 sched_break_ending_receiver,
                 restart_wait_time_receiver,
@@ -134,7 +139,11 @@ impl Scheduler {
         let config_clone = config.clone();
         let restart_wait_time_sender_clone = restart_wait_time_sender.clone();
         std::thread::spawn(move || {
-            IdleDetector::run(&config_clone, restart_wait_time_sender_clone);
+            IdleDetector::run(
+                &config_clone,
+                idle_detection_enabled,
+                restart_wait_time_sender_clone
+            );
         });
         (sched_break_ending_sender, restart_wait_time_sender)
     }
@@ -236,18 +245,34 @@ impl Scheduler {
                         .recv_timeout(time_to_sleep);
                     match res {
                         Ok(InnerMsg::HasBeenIdle) => {
+                            println!(
+                                "\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got HasBeenIdle message",
+                                period, remaining_time, opt_time_to_sleep);
                             // If idle detection is enabled, restart the timer.
                             // If idle detection is not enabled, don't do anything.
-                            if self.idle_detection_enabled {
+                            let use_idle_detection =
+                            {
+                                *self.idle_detection_enabled.lock().unwrap()
+                            };
+                            if use_idle_detection {
                                 return WaitingResult::NeedToRestart;
                             }
                         }
                         Ok(InnerMsg::Pause) => {
-                            println!("Got inner message to pause...");
+                            println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got Pause message",
+                                period, remaining_time, opt_time_to_sleep);
                             return WaitingResult::Paused;
                         }
                         Ok(InnerMsg::EnableIdleDetector) => {
-                            self.idle_detection_enabled = true;
+                            println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got EnableIdleDetector message",
+                                period, remaining_time, opt_time_to_sleep);
+
+                            // Make sure the following happens in a block so that the
+                            // idle_detection_enabled Mutex is held as short as possible.
+                            {
+                                let mut use_idle_detection = self.idle_detection_enabled.lock().unwrap();
+                                *use_idle_detection = true;
+                            }
 
                             // TODO: This doesn't logically belong here.
                             self.sender.send(
@@ -256,7 +281,15 @@ impl Scheduler {
                             remaining_time -= time_to_sleep;
                         }
                         Ok(InnerMsg::DisableIdleDetector) => {
-                            self.idle_detection_enabled = false;
+                            println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got DisableIdleDetector message",
+                                period, remaining_time, opt_time_to_sleep);
+
+                            // Make sure the following happens in a block so that the
+                            // idle_detection_enabled Mutex is held as short as possible.
+                            {
+                                let mut use_idle_detection = self.idle_detection_enabled.lock().unwrap();
+                                *use_idle_detection = false;
+                            }
 
                             // TODO: This doesn't logically belong here.
                             self.sender.send(
@@ -265,6 +298,8 @@ impl Scheduler {
                             remaining_time -= time_to_sleep;
                         }
                         Err(_) => {
+                            println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, timeout no message",
+                                period, remaining_time, opt_time_to_sleep);
                             self.sender.send(
                                 super::Msg::TimeRemainingBeforeBreak(period),
                             ).expect("TODO: figure out what to do about channels potentially failing");
