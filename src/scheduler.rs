@@ -77,6 +77,7 @@ enum State {
 }
 
 pub struct Scheduler {
+    config: Config,
     sender: glib::Sender<super::Msg>,
     plugins: Plugins,
     time_until_break: Duration,
@@ -92,14 +93,15 @@ enum WaitUntilBreakResult {
 
 impl Scheduler {
     pub fn new(
-        config: &Config,
+        config: Config,
         sender: glib::Sender<super::Msg>,
         break_ending_receiver: Receiver<Msg>,
         restart_wait_time_receiver: Receiver<InnerMsg>,
     ) -> Result<Self, ()> {
         Ok(Self {
+            config: config.clone(),
             sender,
-            plugins: Plugins::new(config)?,
+            plugins: Plugins::new(&config)?,
             time_until_break: Duration::from_secs(
                 config.settings.seconds_between_breaks.into(),
             ),
@@ -120,7 +122,7 @@ impl Scheduler {
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
             let mut sched = Self::new(
-                &config_clone,
+                config_clone,
                 sender,
                 sched_break_ending_receiver,
                 restart_wait_time_receiver,
@@ -234,7 +236,11 @@ impl Scheduler {
                         .recv_timeout(time_to_sleep);
                     match res {
                         Ok(InnerMsg::HasBeenIdle) => {
-                            return WaitingResult::NeedToRestart;
+                            // If idle detection is enabled, restart the timer.
+                            // If idle detection is not enabled, don't do anything.
+                            if self.config.settings.idle_detection_enabled {
+                                return WaitingResult::NeedToRestart;
+                            }
                         }
                         Ok(InnerMsg::Pause) => {
                             println!("Got inner message to pause...");
