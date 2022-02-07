@@ -137,13 +137,12 @@ impl Tray {
 
         let menu_right_click_signal_handler_id = None;
 
-        let is_idle_detector_enabled =
-            if config.settings.idle_detection_enabled {
-                IsIdleDetectorEnabled::Yes
-            } else {
-                IsIdleDetectorEnabled::No
-            };
-
+        let is_idle_detector_enabled = if config.settings.idle_detection_enabled
+        {
+            IsIdleDetectorEnabled::Yes
+        } else {
+            IsIdleDetectorEnabled::No
+        };
 
         let tray = Self {
             status_icon,
@@ -257,7 +256,10 @@ impl Tray {
         self.render_normal_icon();
     }
 
-    pub fn set_is_idle_detector_enabled(&mut self, is_idle_detector_enabled: IsIdleDetectorEnabled) {
+    pub fn set_is_idle_detector_enabled(
+        &mut self,
+        is_idle_detector_enabled: IsIdleDetectorEnabled,
+    ) {
         self.is_idle_detector_enabled = is_idle_detector_enabled;
         self.conn_popup_menu();
     }
@@ -307,24 +309,32 @@ impl Tray {
                 match is_idle_detector_enabled {
                     IsIdleDetectorEnabled::No => {
                         let enable_idle_detector_item =
-                            gtk::MenuItem::new_with_label("Enable Idle Detector");
+                            gtk::MenuItem::new_with_label(
+                                "Enable Idle Detector",
+                            );
                         let sender_clone = sender.clone();
                         enable_idle_detector_item.connect_activate(move |_| {
-                            sender_clone
-                                .send(Msg::EnableIdleDetector)
-                                .expect("Could not send Msg::EnableIdleDetector");
+                            sender_clone.send(Msg::EnableIdleDetector).expect(
+                                "Could not send Msg::EnableIdleDetector",
+                            );
                         });
                         menu.append(&enable_idle_detector_item);
                     }
                     IsIdleDetectorEnabled::Yes => {
                         let disable_idle_detector_item =
-                            gtk::MenuItem::new_with_label("Disable Idle Detector");
+                            gtk::MenuItem::new_with_label(
+                                "Disable Idle Detector",
+                            );
                         let sender_clone = sender.clone();
-                        disable_idle_detector_item.connect_activate(move |_| {
-                            sender_clone
-                                .send(Msg::DisableIdleDetector)
-                                .expect("Could not send Msg::DisableIdleDetector");
-                        });
+                        disable_idle_detector_item.connect_activate(
+                            move |_| {
+                                sender_clone
+                                    .send(Msg::DisableIdleDetector)
+                                    .expect(
+                                    "Could not send Msg::DisableIdleDetector",
+                                );
+                            },
+                        );
                         menu.append(&disable_idle_detector_item);
                     }
                 }

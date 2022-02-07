@@ -277,7 +277,7 @@ pub enum InnerMsg {
     Pause,
     HasBeenIdle,
     EnableIdleDetector,
-    DisableIdleDetector
+    DisableIdleDetector,
 }
 
 fn create_periods_to_send_time_left_message(
