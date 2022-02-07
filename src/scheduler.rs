@@ -7,8 +7,9 @@ use super::config::Config;
 use idle_detector::IdleDetector;
 use plugins::{CanBreak, Plugin};
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Copy, Clone, Debug)]
@@ -78,7 +79,7 @@ enum State {
 }
 
 pub struct Scheduler {
-    idle_detection_enabled: Arc<Mutex<bool>>,
+    idle_detection_enabled: Arc<AtomicBool>,
     sender: glib::Sender<super::Msg>,
     plugins: Plugins,
     time_until_break: Duration,
@@ -95,7 +96,7 @@ enum WaitUntilBreakResult {
 impl Scheduler {
     pub fn new(
         config: &Config,
-        idle_detection_enabled: Arc<Mutex<bool>>,
+        idle_detection_enabled: Arc<AtomicBool>,
         sender: glib::Sender<super::Msg>,
         break_ending_receiver: Receiver<Msg>,
         restart_wait_time_receiver: Receiver<InnerMsg>,
@@ -121,7 +122,8 @@ impl Scheduler {
             channel();
         let (restart_wait_time_sender, restart_wait_time_receiver) = channel();
         let config_clone = config.clone();
-        let idle_detection_enabled = Arc::new(Mutex::new(config.settings.idle_detection_enabled));
+        let idle_detection_enabled =
+            Arc::new(AtomicBool::new(config.settings.idle_detection_enabled));
         let idle_detection_enabled_clone = idle_detection_enabled.clone();
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
@@ -141,8 +143,8 @@ impl Scheduler {
         std::thread::spawn(move || {
             IdleDetector::run(
                 &config_clone,
-                idle_detection_enabled,
-                restart_wait_time_sender_clone
+                &idle_detection_enabled,
+                restart_wait_time_sender_clone,
             );
         });
         (sched_break_ending_sender, restart_wait_time_sender)
@@ -248,13 +250,11 @@ impl Scheduler {
                             println!(
                                 "\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got HasBeenIdle message",
                                 period, remaining_time, opt_time_to_sleep);
-                            // If idle detection is enabled, restart the timer.
-                            // If idle detection is not enabled, don't do anything.
-                            let use_idle_detection =
+
+                            if self
+                                .idle_detection_enabled
+                                .load(Ordering::Relaxed)
                             {
-                                *self.idle_detection_enabled.lock().unwrap()
-                            };
-                            if use_idle_detection {
                                 return WaitingResult::NeedToRestart;
                             }
                         }
@@ -267,12 +267,8 @@ impl Scheduler {
                             println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got EnableIdleDetector message",
                                 period, remaining_time, opt_time_to_sleep);
 
-                            // Make sure the following happens in a block so that the
-                            // idle_detection_enabled Mutex is held as short as possible.
-                            {
-                                let mut use_idle_detection = self.idle_detection_enabled.lock().unwrap();
-                                *use_idle_detection = true;
-                            }
+                            self.idle_detection_enabled
+                                .store(true, Ordering::Relaxed);
 
                             // TODO: This doesn't logically belong here.
                             self.sender.send(
@@ -284,12 +280,8 @@ impl Scheduler {
                             println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got DisableIdleDetector message",
                                 period, remaining_time, opt_time_to_sleep);
 
-                            // Make sure the following happens in a block so that the
-                            // idle_detection_enabled Mutex is held as short as possible.
-                            {
-                                let mut use_idle_detection = self.idle_detection_enabled.lock().unwrap();
-                                *use_idle_detection = false;
-                            }
+                            self.idle_detection_enabled
+                                .store(false, Ordering::Relaxed);
 
                             // TODO: This doesn't logically belong here.
                             self.sender.send(
