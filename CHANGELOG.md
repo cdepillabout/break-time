@@ -4,6 +4,9 @@
 *   Add a window title check for Zoom calls.
     [#17](https://github.com/cdepillabout/break-time/pull/17)
 
+*   Add a window title check for Skype, Jitsi, and BigBlueButton.
+    [#17](https://github.com/cdepillabout/break-time/pull/17)
+
 *   For the Google Calendar plugin, ignore events from consideration where the
     event description contains the string `ignore break-time`.  This gives a
     nice way to make sure that break-time continues to force breaks to occur
@@ -29,6 +32,7 @@
 
 *   Add two command line commands: `google-calendar list-events` and
     `google-calendar ignore-event`.
+    [#25](https://github.com/cdepillabout/break-time/pull/25)
 
     `google-calendar list-events` lists all the Google Calendar events that are
     occurring right now that will cause break-time to ignore a scheduled break
@@ -47,6 +51,11 @@
     ```console
     $ break-time google-calendar ignore-event "123phhhlpppoohh88hhcl9988b"
     ```
+
+*   Add a value to the config file `idle_detection_enabled`.  It is set to
+    `true` by default.  If you set it to false, then the X idle timer is
+    ignored, so breaks will still occur even if you have stepped away from your
+    computer. [#31](https://github.com/cdepillabout/break-time/pull/31)
 
 ## 0.1.2
 
