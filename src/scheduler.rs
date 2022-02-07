@@ -248,9 +248,21 @@ impl Scheduler {
                         }
                         Ok(InnerMsg::EnableIdleDetector) => {
                             self.idle_detection_enabled = true;
+
+                            // TODO: This doesn't logically belong here.
+                            self.sender.send(
+                                super::Msg::TimeRemainingBeforeBreak(period),
+                            ).expect("TODO: figure out what to do about channels potentially failing");
+                            remaining_time -= time_to_sleep;
                         }
                         Ok(InnerMsg::DisableIdleDetector) => {
                             self.idle_detection_enabled = false;
+
+                            // TODO: This doesn't logically belong here.
+                            self.sender.send(
+                                super::Msg::TimeRemainingBeforeBreak(period),
+                            ).expect("TODO: figure out what to do about channels potentially failing");
+                            remaining_time -= time_to_sleep;
                         }
                         Err(_) => {
                             self.sender.send(
