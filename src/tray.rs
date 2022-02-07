@@ -3,6 +3,7 @@
 pub use glib::translate::*;
 use std::time::Duration;
 
+use crate::config::Config;
 use crate::prelude::*;
 use crate::Msg;
 
@@ -98,6 +99,8 @@ pub struct Tray {
     pixbuf_stopped: gdk_pixbuf::Pixbuf,
     sender: glib::Sender<Msg>,
     menu_right_click_signal_handler_id: Option<glib::signal::SignalHandlerId>,
+    is_idle_detector_enabled: IsIdleDetectorEnabled,
+    is_paused: IsPaused,
 }
 
 fn load_pixbuf(image_bytes: &[u8]) -> gdk_pixbuf::Pixbuf {
@@ -116,7 +119,7 @@ fn load_pixbuf(image_bytes: &[u8]) -> gdk_pixbuf::Pixbuf {
 }
 
 impl Tray {
-    pub fn new(sender: glib::Sender<Msg>) -> Self {
+    pub fn new(config: &Config, sender: glib::Sender<Msg>) -> Self {
         let pixbuf = load_pixbuf(IMG);
         let pixbuf_stopped = load_pixbuf(IMG_STOPPED);
 
@@ -134,12 +137,22 @@ impl Tray {
 
         let menu_right_click_signal_handler_id = None;
 
+        let is_idle_detector_enabled =
+            if config.settings.idle_detection_enabled {
+                IsIdleDetectorEnabled::Yes
+            } else {
+                IsIdleDetectorEnabled::No
+            };
+
+
         let tray = Self {
             status_icon,
             pixbuf,
             pixbuf_stopped,
             sender,
             menu_right_click_signal_handler_id,
+            is_idle_detector_enabled,
+            is_paused: IsPaused::No,
         };
 
         tray.render_normal_icon();
@@ -212,8 +225,8 @@ impl Tray {
         self.render_pixbuf(&new_pixbuf);
     }
 
-    pub fn run(sender: glib::Sender<Msg>) -> Self {
-        let mut tray = Self::new(sender);
+    pub fn run(config: &Config, sender: glib::Sender<Msg>) -> Self {
+        let mut tray = Self::new(config, sender);
         tray.set_tooltip_text("break-time");
 
         connect_activate(
@@ -223,31 +236,41 @@ impl Tray {
             },
         );
 
-        tray.conn_popup_menu(IsPaused::No);
+        tray.conn_popup_menu();
 
         tray
     }
 
     pub fn resume(&mut self) {
         self.render_normal_icon();
-        self.conn_popup_menu(IsPaused::No);
+        self.is_paused = IsPaused::No;
+        self.conn_popup_menu();
     }
 
     pub fn pause(&mut self) {
         self.render_pause_icon();
-        self.conn_popup_menu(IsPaused::Yes);
+        self.is_paused = IsPaused::Yes;
+        self.conn_popup_menu();
     }
 
     pub fn break_end(&self) {
         self.render_normal_icon();
     }
 
-    fn conn_popup_menu(&mut self, is_paused: IsPaused) {
+    pub fn set_is_idle_detector_enabled(&mut self, is_idle_detector_enabled: IsIdleDetectorEnabled) {
+        self.is_idle_detector_enabled = is_idle_detector_enabled;
+        self.conn_popup_menu();
+    }
+
+    fn conn_popup_menu(&mut self) {
         if let Some(prev_signal_handler_id) =
             &self.menu_right_click_signal_handler_id
         {
             signal_handler_disconnect(self.status_icon, prev_signal_handler_id);
         }
+
+        let is_idle_detector_enabled = self.is_idle_detector_enabled.clone();
+        let is_paused = self.is_paused.clone();
 
         let sender = self.sender.clone();
         let signal_handler_id = connect_popup_menu(
@@ -278,6 +301,31 @@ impl Tray {
                                 .expect("Could not send Msg::Resume");
                         });
                         menu.append(&resume_item);
+                    }
+                }
+
+                match is_idle_detector_enabled {
+                    IsIdleDetectorEnabled::No => {
+                        let enable_idle_detector_item =
+                            gtk::MenuItem::new_with_label("Enable Idle Detector");
+                        let sender_clone = sender.clone();
+                        enable_idle_detector_item.connect_activate(move |_| {
+                            sender_clone
+                                .send(Msg::EnableIdleDetector)
+                                .expect("Could not send Msg::EnableIdleDetector");
+                        });
+                        menu.append(&enable_idle_detector_item);
+                    }
+                    IsIdleDetectorEnabled::Yes => {
+                        let disable_idle_detector_item =
+                            gtk::MenuItem::new_with_label("Disable Idle Detector");
+                        let sender_clone = sender.clone();
+                        disable_idle_detector_item.connect_activate(move |_| {
+                            sender_clone
+                                .send(Msg::DisableIdleDetector)
+                                .expect("Could not send Msg::DisableIdleDetector");
+                        });
+                        menu.append(&disable_idle_detector_item);
                     }
                 }
 
@@ -313,7 +361,14 @@ impl Tray {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum IsPaused {
+    Yes,
+    No,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum IsIdleDetectorEnabled {
     Yes,
     No,
 }

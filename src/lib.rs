@@ -32,6 +32,8 @@ pub enum Msg {
     Resume,
     StartBreak,
     TimeRemainingBeforeBreak(Duration),
+    EnableIdleDetector,
+    DisableIdleDetector,
 }
 
 fn handle_msg_recv(
@@ -70,6 +72,14 @@ fn handle_msg_recv(
         Msg::TimeRemainingBeforeBreak(remaining_time) => {
             tray.update_time_remaining(remaining_time);
         }
+        Msg::EnableIdleDetector => {
+            tray.set_is_idle_detector_enabled(tray::IsIdleDetectorEnabled::Yes);
+            scheduler_inner_sender.send(scheduler::InnerMsg::EnableIdleDetector).expect("TODO: figure out what to do about channels potentially failing");
+        }
+        Msg::DisableIdleDetector => {
+            tray.set_is_idle_detector_enabled(tray::IsIdleDetectorEnabled::No);
+            scheduler_inner_sender.send(scheduler::InnerMsg::DisableIdleDetector).expect("TODO: figure out what to do about channels potentially failing");
+        }
     }
 }
 
@@ -79,7 +89,7 @@ pub fn run(config: Config) {
     let (sender, receiver) =
         glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
 
-    let mut tray = tray::Tray::run(sender.clone());
+    let mut tray = tray::Tray::run(&config, sender.clone());
 
     println!("Starting the scheduler...");
     let (scheduler_outer_sender, scheduler_inner_sender) =
