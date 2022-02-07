@@ -14,7 +14,7 @@ early.  Once a break starts, you are forced to stop using your computer.
 However, there are plugins provided to avoid breaks at inconvenient times.  For
 instance, there is a plugin to avoid having a break occur during a time when
 you have an event on your Google Calendar, as well as a plugin to avoid a break
-when you are on a video chat in Google Meet.
+when you are on a video chat in Google Meet, Zoom, etc.
 
 break-time currently only runs on Linux with X11.  However, PRs are welcome
 adding support for other platforms and window systems.

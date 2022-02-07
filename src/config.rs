@@ -49,6 +49,8 @@ pub struct Settings {
     pub seconds_between_breaks: u32,
     #[serde(default = "default_clicks_to_end_break_early")]
     pub clicks_to_end_break_early: u32,
+    #[serde(default = "default_idle_detection_enabled")]
+    pub idle_detection_enabled: bool,
     #[serde(default = "default_idle_detection_seconds")]
     pub idle_detection_seconds: u32,
     #[serde(rename = "plugin")]
@@ -67,6 +69,10 @@ const fn default_clicks_to_end_break_early() -> u32 {
     400
 }
 
+const fn default_idle_detection_enabled() -> bool {
+    true
+}
+
 const fn default_idle_detection_seconds() -> u32 {
     480
 }
@@ -78,6 +84,7 @@ impl Default for Settings {
             seconds_between_breaks: default_seconds_between_breaks(),
             clicks_to_end_break_early: default_clicks_to_end_break_early(),
             all_plugin_settings: PluginSettings::default(),
+            idle_detection_enabled: default_idle_detection_enabled(),
             idle_detection_seconds: default_idle_detection_seconds(),
         }
     }

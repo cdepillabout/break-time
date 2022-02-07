@@ -342,8 +342,10 @@ struct WinPropCookies<'a> {
 
 #[derive(Clone, Debug)]
 struct WinProps {
+    #[allow(dead_code)]
     wm_name: Result<String, ()>,
     net_wm_name: Result<String, ()>,
+    #[allow(dead_code)]
     transient_for_wins: Result<Vec<xcb::Window>, ()>,
     class_name: Result<String, ()>,
     class: Result<String, ()>,

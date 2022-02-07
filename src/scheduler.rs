@@ -77,6 +77,7 @@ enum State {
 }
 
 pub struct Scheduler {
+    idle_detection_enabled: bool,
     sender: glib::Sender<super::Msg>,
     plugins: Plugins,
     time_until_break: Duration,
@@ -98,8 +99,9 @@ impl Scheduler {
         restart_wait_time_receiver: Receiver<InnerMsg>,
     ) -> Result<Self, ()> {
         Ok(Self {
+            idle_detection_enabled: config.settings.idle_detection_enabled,
             sender,
-            plugins: Plugins::new(config)?,
+            plugins: Plugins::new(&config)?,
             time_until_break: Duration::from_secs(
                 config.settings.seconds_between_breaks.into(),
             ),
@@ -169,7 +171,7 @@ impl Scheduler {
         }
     }
 
-    fn wait_until_break(&self) -> WaitUntilBreakResult {
+    fn wait_until_break(&mut self) -> WaitUntilBreakResult {
         loop {
             let waiting_result = self.send_msgs_while_waiting();
             match waiting_result {
@@ -213,7 +215,7 @@ impl Scheduler {
         }
     }
 
-    fn send_msgs_while_waiting(&self) -> WaitingResult {
+    fn send_msgs_while_waiting(&mut self) -> WaitingResult {
         self.sender.send(super::Msg::ResetSysTrayIcon).expect(
             "TODO: figure out what to do about channels potentially failing",
         );
@@ -234,11 +236,21 @@ impl Scheduler {
                         .recv_timeout(time_to_sleep);
                     match res {
                         Ok(InnerMsg::HasBeenIdle) => {
-                            return WaitingResult::NeedToRestart;
+                            // If idle detection is enabled, restart the timer.
+                            // If idle detection is not enabled, don't do anything.
+                            if self.idle_detection_enabled {
+                                return WaitingResult::NeedToRestart;
+                            }
                         }
                         Ok(InnerMsg::Pause) => {
                             println!("Got inner message to pause...");
                             return WaitingResult::Paused;
+                        }
+                        Ok(InnerMsg::EnableIdleDetector) => {
+                            self.idle_detection_enabled = true;
+                        }
+                        Ok(InnerMsg::DisableIdleDetector) => {
+                            self.idle_detection_enabled = false;
                         }
                         Err(_) => {
                             self.sender.send(
@@ -264,6 +276,8 @@ enum WaitingResult {
 pub enum InnerMsg {
     Pause,
     HasBeenIdle,
+    EnableIdleDetector,
+    DisableIdleDetector,
 }
 
 fn create_periods_to_send_time_left_message(
