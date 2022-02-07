@@ -93,7 +93,7 @@ enum WaitUntilBreakResult {
 
 impl Scheduler {
     pub fn new(
-        config: Config,
+        config: &Config,
         sender: glib::Sender<super::Msg>,
         break_ending_receiver: Receiver<Msg>,
         restart_wait_time_receiver: Receiver<InnerMsg>,
@@ -122,7 +122,7 @@ impl Scheduler {
         std::thread::spawn(move || {
             // TODO: Need to actually handle this error.
             let mut sched = Self::new(
-                config_clone,
+                &config_clone,
                 sender,
                 sched_break_ending_receiver,
                 restart_wait_time_receiver,

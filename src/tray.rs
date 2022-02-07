@@ -269,8 +269,8 @@ impl Tray {
             signal_handler_disconnect(self.status_icon, prev_signal_handler_id);
         }
 
-        let is_idle_detector_enabled = self.is_idle_detector_enabled.clone();
-        let is_paused = self.is_paused.clone();
+        let is_idle_detector_enabled = self.is_idle_detector_enabled;
+        let is_paused = self.is_paused;
 
         let sender = self.sender.clone();
         let signal_handler_id = connect_popup_menu(
