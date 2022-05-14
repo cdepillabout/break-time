@@ -273,7 +273,10 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
 
 fn is_browser(class: &str, class_name: &str) -> bool {
     (class == "Chromium-browser" && class_name == "chromium-browser")
+        || (class == "Chromium" && class_name == "chromium")
         || (class == "Firefox" && class_name == "Navigator")
+        || (class == "firefox" && class_name == "Navigator")
+        || (class == "Firefox" && class_name == "firefox")
 }
 
 fn browser_title_starts_with_raw(
