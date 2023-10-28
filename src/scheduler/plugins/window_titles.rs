@@ -251,9 +251,9 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
                  class_name: &str,
                  class: &str|
                  -> CanBreak {
-                    if class == "zoom"
-                        && class_name == "zoom"
-                        && net_wm_name == "Zoom"
+                    if class.contains("zoom")
+                        && class_name.contains("zoom")
+                        && net_wm_name.contains("Zoom")
                     {
                         CanBreak::No
                     } else {
