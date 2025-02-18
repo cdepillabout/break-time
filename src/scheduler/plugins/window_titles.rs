@@ -276,6 +276,7 @@ fn is_browser(class: &str, class_name: &str) -> bool {
         || (class == "Chromium" && class_name == "chromium")
         || (class == "Firefox" && class_name == "Navigator")
         || (class == "firefox" && class_name == "Navigator")
+        || (class == "firefox_firefox" && class_name == "Navigator")
         || (class == "Firefox" && class_name == "firefox")
 }
 
