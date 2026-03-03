@@ -130,6 +130,14 @@ fn connect_events(config: &Config, state: &State) {
 }
 
 fn update_time_remaining(state: &State, full_time: Duration) -> Continue {
+    // If the break was already ended (e.g. via spacebar), stop this timer.
+    // Without this check, the timer keeps running after the break windows are
+    // destroyed and eventually calls end_break(), which tries to send on a
+    // channel whose receiver has already been dropped, causing a panic.
+    if state.has_break_ended() {
+        return Continue(false);
+    }
+
     let system_time_now = SystemTime::now();
     let option_system_time_diff =
         system_time_now.duration_since(state.start_time).ok();

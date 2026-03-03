@@ -146,6 +146,10 @@ impl State {
         );
     }
 
+    pub fn has_break_ended(&self) -> bool {
+        *self.presses_remaining.read().unwrap() == 0
+    }
+
     pub fn end(&self) {
         self.sender.send(Message::End).expect(
             "TODO: figure out what to do about channels potentially failing",
