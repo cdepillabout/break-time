@@ -45,7 +45,12 @@ let
           # Things like cargo, rustc, rustfmt, and clippy can be installed with commands like
           #
           # $ rustup component add clippy
-          rustup
+          #rustup
+
+          # Or, just directly install cargo, rustc, rustfmt, etc within the Nix shell.
+          cargo
+          rustc
+          rustfmt
 
           # Some rust packages use clang to compile c bindings.
           llvmPackages.clang
