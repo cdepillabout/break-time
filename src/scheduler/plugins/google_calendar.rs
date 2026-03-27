@@ -384,6 +384,14 @@ fn filter_event(event: &google_calendar3::Event) -> bool {
         }
     }
 
+    // Ignore events where the summary (title) is "Out of office".
+    // Google Calendar creates these automatically for OOO events.
+    if let Some(summary) = &event.summary {
+        if summary.to_lowercase() == "out of office" {
+            return false;
+        }
+    }
+
     // Ignore events where the `ignore-break-time` extended property is set.
     if let Some(extended_props) = &event.extended_properties {
         if let Some(props) = &extended_props.private {
