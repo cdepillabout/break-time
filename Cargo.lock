@@ -134,6 +134,7 @@ dependencies = [
  "gtk",
  "indoc",
  "pango",
+ "rustls",
  "serde",
  "serde_json",
  "tokio",
