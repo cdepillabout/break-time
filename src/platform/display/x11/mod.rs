@@ -2,6 +2,8 @@
 //! Wraps the low-level [`X11`] connection helper and owns the X11-specific window
 //! enumeration that feeds the cross-platform meeting-detection predicates.
 
+mod conn;
+
 use std::time::Duration;
 
 use x11rb::protocol::screensaver::ConnectionExt as _;
@@ -10,7 +12,7 @@ use x11rb::protocol::xproto::{
 };
 
 use super::{DisplayBackend, WindowInfo, WindowRef};
-use crate::x11::X11;
+use conn::X11;
 
 const PROP_STARTING_OFFSET: u32 = 0;
 const PROP_LENGTH_TO_GET: u32 = 2048;

@@ -34,7 +34,6 @@ mod opts;
 mod platform;
 mod prelude;
 mod scheduler;
-mod x11;
 
 use std::sync::mpsc::Sender;
 use std::time::Duration;
