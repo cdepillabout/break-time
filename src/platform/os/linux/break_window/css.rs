@@ -9,7 +9,7 @@ pub fn setup(window: &gtk::Window) {
         }
     };
     let css_provider = gtk::CssProvider::new();
-    let css_src = include_str!("../../style/style.css");
+    let css_src = include_str!("../../../../../style/style.css");
     match css_provider.load_from_data(css_src.as_bytes()) {
         Err(err) => println!("Failed to load css provider from data: {err}"),
         Ok(()) => {

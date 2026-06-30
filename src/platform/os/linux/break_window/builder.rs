@@ -22,6 +22,6 @@ where
 
 #[must_use]
 pub fn create() -> gtk::Builder {
-    let glade_src = include_str!("../../glade/ui.glade");
+    let glade_src = include_str!("../../../../../glade/ui.glade");
     gtk::Builder::from_string(glade_src)
 }

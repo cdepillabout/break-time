@@ -8,29 +8,18 @@ use glib::clone;
 use glib::ControlFlow;
 use std::time::{Duration, SystemTime};
 
-use x11rb::protocol::xproto::{
-    Atom, ClientMessageEvent, ConnectionExt as _, EventMask, Window,
-};
-
-use super::Msg;
 use crate::config::Config;
+use crate::platform::display::{DisplayBackend, WindowRef};
+use crate::Msg;
 use prelude::*;
 use state::{Message, State};
-
-use crate::x11::X11;
-
-const XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER: u32 = 2;
 
 fn handle_msg_recv(
     state: &State,
     msg: Message,
-    x11: &X11,
-    root_win: Window,
-    net_active_win_atom: Atom,
-    option_old_active_win: Option<Window>,
+    display: &dyn DisplayBackend,
+    saved_active_win: Option<WindowRef>,
 ) -> ControlFlow {
-    // enable(state);
-
     match msg {
         Message::End => {
             for window in state.get_app_wins() {
@@ -39,57 +28,11 @@ fn handle_msg_recv(
             }
             state.notify_app_end();
 
-            focus_previous_window(
-                x11,
-                root_win,
-                net_active_win_atom,
-                option_old_active_win,
-            );
+            if let Some(win) = saved_active_win {
+                display.restore_active_window(win);
+            }
 
             ControlFlow::Break
-        }
-    }
-}
-
-fn focus_previous_window(
-    x11: &X11,
-    root_win: Window,
-    net_active_win_atom: Atom,
-    option_old_active_win: Option<Window>,
-) {
-    if let Some(old_active_win) = option_old_active_win {
-        let message_data: [u32; 5] = [
-            XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER,
-            x11rb::CURRENT_TIME,
-            x11rb::NONE,
-            0,
-            0,
-        ];
-
-        let message_event = ClientMessageEvent::new(
-            // Data size (8-bit, 16-bit, or 32-bit).  This message is 32-bit.
-            32,
-            old_active_win,
-            net_active_win_atom,
-            message_data,
-        );
-
-        let res = x11.conn.send_event(
-            false,
-            root_win,
-            EventMask::SUBSTRUCTURE_NOTIFY | EventMask::SUBSTRUCTURE_REDIRECT,
-            message_event,
-        );
-
-        match res {
-            Ok(cookie) => {
-                if let Err(err) = cookie.check() {
-                    println!("Could not focus old focused window: {err}");
-                }
-            }
-            Err(err) => {
-                println!("Could not focus old focused window: {err}");
-            }
         }
     }
 }
@@ -245,17 +188,10 @@ fn setup_windows(state: &State) {
 }
 
 pub fn start_break(config: &Config, app_sender: glib::Sender<Msg>) {
-    let x11 = X11::connect();
+    let display = crate::platform::create_display();
+    let saved_active_win = display.save_active_window();
 
-    let net_active_win_atom = x11.create_atom("_NET_ACTIVE_WINDOW").expect(
-        "Could not get the _NET_ACTIVE_WINDOW value from the X server.",
-    );
-    let root_win = x11
-        .get_root_win()
-        .expect("Could not get the root window from the X server.");
-    let old_active_win = x11.get_win_prop(root_win, net_active_win_atom);
-
-    println!("previous active_win: {old_active_win:?}");
+    println!("previous active_win: {saved_active_win:?}");
 
     // `MainContext::channel` is deprecated in glib 0.18 (removed in 0.20) in favour of
     // async-channel + `spawn_future_local`.  Migrating the synchronous `Msg`/`Message` plumbing to
@@ -268,23 +204,18 @@ pub fn start_break(config: &Config, app_sender: glib::Sender<Msg>) {
 
     setup(&state);
 
-    connect_events(&config, &state);
+    connect_events(config, &state);
 
     redisplay(&state);
 
     setup_windows(&state);
 
+    // `display` (the backend) and the saved active window are moved into this
+    // callback so the active window can be restored when the break ends.
     receiver.attach(
         None,
         clone!(@strong state => move |msg|
-            handle_msg_recv(
-                &state,
-                msg,
-                &x11,
-                root_win,
-                net_active_win_atom,
-                old_active_win
-            )
+            handle_msg_recv(&state, msg, display.as_ref(), saved_active_win)
         ),
     );
 }

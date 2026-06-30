@@ -1,7 +1,10 @@
-//! Linux OS-layer implementation: the `GtkStatusIcon` system tray and the
-//! display-backend constructor. The break-window GUI is added in a later step.
+//! Linux OS-layer implementation: the `GtkStatusIcon` system tray, the GTK
+//! break-window GUI, and the display-backend constructor.
 
+pub mod break_window;
 pub mod tray;
+
+pub use break_window::start_break;
 
 use crate::platform::display::DisplayBackend;
 

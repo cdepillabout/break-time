@@ -19,7 +19,6 @@ use std::time::Duration;
 /// An opaque handle to a display-server window, used to remember the active
 /// window at break start and restore focus to it at break end. On X11 this
 /// wraps an `xproto::Window`.
-#[allow(dead_code)] // `.0` is read once active-window save/restore lands.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct WindowRef(pub u32);
 
@@ -48,4 +47,13 @@ pub trait DisplayBackend {
     /// signals that enumeration failed (distinct from "no windows"); the caller
     /// treats that as "do not break right now".
     fn list_windows(&self) -> Result<Vec<WindowInfo>, ()>;
+
+    /// The currently-active window, so it can be re-focused when the break ends.
+    /// `None` if there is no active window or it cannot be determined.
+    fn save_active_window(&self) -> Option<WindowRef>;
+
+    /// Re-focus a window previously returned by
+    /// [`save_active_window`](Self::save_active_window). Best-effort: failures
+    /// are logged, not returned.
+    fn restore_active_window(&self, win: WindowRef);
 }

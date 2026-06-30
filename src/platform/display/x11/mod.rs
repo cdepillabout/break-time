@@ -5,7 +5,9 @@
 use std::time::Duration;
 
 use x11rb::protocol::screensaver::ConnectionExt as _;
-use x11rb::protocol::xproto::{Atom, AtomEnum, ConnectionExt as _, Window};
+use x11rb::protocol::xproto::{
+    Atom, AtomEnum, ClientMessageEvent, ConnectionExt as _, EventMask, Window,
+};
 
 use super::{DisplayBackend, WindowInfo, WindowRef};
 use crate::x11::X11;
@@ -13,9 +15,13 @@ use crate::x11::X11;
 const PROP_STARTING_OFFSET: u32 = 0;
 const PROP_LENGTH_TO_GET: u32 = 2048;
 
+// EWMH source indication for the _NET_ACTIVE_WINDOW client message: 2 == "other".
+const XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER: u32 = 2;
+
 pub struct X11Backend {
     x11: X11,
     root: Window,
+    net_active_window: Atom,
     net_wm_name: Atom,
     utf8_string: Atom,
 }
@@ -29,6 +35,9 @@ impl X11Backend {
         // Interning these core atoms can only realistically fail on a broken X
         // server; match the previous behaviour and take the process down at
         // startup if so.
+        let net_active_window = x11
+            .create_atom("_NET_ACTIVE_WINDOW")
+            .expect("X11: could not intern the _NET_ACTIVE_WINDOW atom");
         let net_wm_name = x11
             .create_atom("_NET_WM_NAME")
             .expect("X11: could not intern the _NET_WM_NAME atom");
@@ -38,6 +47,7 @@ impl X11Backend {
         Self {
             x11,
             root,
+            net_active_window,
             net_wm_name,
             utf8_string,
         }
@@ -161,6 +171,48 @@ impl DisplayBackend for X11Backend {
             .iter()
             .map(|win| self.get_win_props(*win))
             .collect())
+    }
+
+    fn save_active_window(&self) -> Option<WindowRef> {
+        self.x11
+            .get_win_prop(self.root, self.net_active_window)
+            .map(WindowRef)
+    }
+
+    fn restore_active_window(&self, win: WindowRef) {
+        let message_data: [u32; 5] = [
+            XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER,
+            x11rb::CURRENT_TIME,
+            x11rb::NONE,
+            0,
+            0,
+        ];
+
+        let message_event = ClientMessageEvent::new(
+            // Data size (8-bit, 16-bit, or 32-bit). This message is 32-bit.
+            32,
+            win.0,
+            self.net_active_window,
+            message_data,
+        );
+
+        let res = self.x11.conn.send_event(
+            false,
+            self.root,
+            EventMask::SUBSTRUCTURE_NOTIFY | EventMask::SUBSTRUCTURE_REDIRECT,
+            message_event,
+        );
+
+        match res {
+            Ok(cookie) => {
+                if let Err(err) = cookie.check() {
+                    println!("Could not focus old focused window: {err}");
+                }
+            }
+            Err(err) => {
+                println!("Could not focus old focused window: {err}");
+            }
+        }
     }
 }
 
