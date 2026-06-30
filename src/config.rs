@@ -107,22 +107,25 @@ impl Config {
                 conf_dir.join(config_file_name)
             }
             None => {
-                let xdg_base_dir =
-                    xdg::BaseDirectories::with_prefix("break-time")
-                        .map_err(|_xdg_base_dir_err| ())?;
-                xdg_base_dir
-                    .place_config_file(config_file_name)
-                    .map_err(|_io_err| ())?
+                let proj_dirs =
+                    directories::ProjectDirs::from("", "", "break-time")
+                        .ok_or(())?;
+                let config_dir = proj_dirs.config_dir();
+                // `directories` only computes the path; unlike `xdg`'s
+                // `place_config_file`, it does not create the directory, so do
+                // it explicitly here.
+                std::fs::create_dir_all(config_dir).map_err(|_io_err| ())?;
+                config_dir.join(config_file_name)
             }
         };
 
         let cache_dir = match &opts.cache_dir {
             Some(cache_dir) => cache_dir.clone(),
             None => {
-                let xdg_base_dir =
-                    xdg::BaseDirectories::with_prefix("break-time")
-                        .map_err(|_xdg_base_dir_err| ())?;
-                xdg_base_dir.get_cache_home()
+                let proj_dirs =
+                    directories::ProjectDirs::from("", "", "break-time")
+                        .ok_or(())?;
+                proj_dirs.cache_dir().to_path_buf()
             }
         };
         std::fs::create_dir_all(&cache_dir).map_err(|_io_err| ())?;
