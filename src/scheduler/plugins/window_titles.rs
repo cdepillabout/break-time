@@ -1,143 +1,22 @@
 use super::{CanBreak, Plugin};
 
 use crate::config::Config;
-use crate::x11::X11;
-
-use x11rb::protocol::xproto::{Atom, AtomEnum, ConnectionExt as _, Window};
+use crate::platform::create_display;
+use crate::platform::display::{DisplayBackend, WindowInfo};
 
 pub struct WindowTitles {
-    x11: X11,
-    net_wm_name_atom: Atom,
-    utf8_string_atom: Atom,
+    display: Box<dyn DisplayBackend>,
 }
 
 impl WindowTitles {
-    pub fn new(_config: &Config) -> Result<Self, ()> {
-        let x11 = X11::connect();
-
-        let net_wm_name_atom = x11.create_atom("_NET_WM_NAME").ok_or(())?;
-        let utf8_string_atom = x11.create_atom("UTF8_STRING").ok_or(())?;
-
-        Ok(Self {
-            x11,
-            net_wm_name_atom,
-            utf8_string_atom,
-        })
-    }
-
-    fn get_string_prop(
-        &self,
-        win: Window,
-        property: Atom,
-        type_: Atom,
-    ) -> Result<String, ()> {
-        let reply = self
-            .x11
-            .conn
-            .get_property(
-                false,
-                win,
-                property,
-                type_,
-                PROP_STARTING_OFFSET,
-                PROP_LENGTH_TO_GET,
-            )
-            .map_err(|_| ())?
-            .reply()
-            .map_err(|_| ())?;
-        String::from_utf8(reply.value).map_err(|_| ())
-    }
-
-    fn get_class_info(&self, win: Window) -> ClassInfo<()> {
-        let res_value = self
-            .x11
-            .conn
-            .get_property(
-                false,
-                win,
-                AtomEnum::WM_CLASS,
-                AtomEnum::STRING,
-                PROP_STARTING_OFFSET,
-                PROP_LENGTH_TO_GET,
-            )
-            .map_err(|_| ())
-            .and_then(|cookie| cookie.reply().map_err(|_| ()));
-
-        match res_value {
-            Err(()) => ClassInfo::err(()),
-            Ok(reply) => ClassInfo::from_raw_data(&reply.value, (), |_| ()),
+    pub fn new(_config: &Config) -> Self {
+        Self {
+            display: create_display(),
         }
-    }
-
-    fn get_transient_for(&self, win: Window) -> Result<Vec<Window>, ()> {
-        let reply = self
-            .x11
-            .conn
-            .get_property(
-                false,
-                win,
-                AtomEnum::WM_TRANSIENT_FOR,
-                AtomEnum::WINDOW,
-                PROP_STARTING_OFFSET,
-                PROP_LENGTH_TO_GET,
-            )
-            .map_err(|_| ())?
-            .reply()
-            .map_err(|_| ())?;
-        Ok(reply.value32().map(Iterator::collect).unwrap_or_default())
-    }
-
-    fn get_win_props(&self, win: Window) -> WinProps {
-        let wm_name = self.get_string_prop(
-            win,
-            AtomEnum::WM_NAME.into(),
-            AtomEnum::STRING.into(),
-        );
-        let net_wm_name = self.get_string_prop(
-            win,
-            self.net_wm_name_atom,
-            self.utf8_string_atom,
-        );
-        let transient_for_wins = self.get_transient_for(win);
-        let ClassInfo {
-            name: class_name,
-            class,
-        } = self.get_class_info(win);
-
-        WinProps {
-            wm_name,
-            net_wm_name,
-            transient_for_wins,
-            class_name,
-            class,
-        }
-    }
-
-    fn get_all_win_props(&self) -> Result<Vec<WinProps>, ()> {
-        let wins = self.get_all_wins()?;
-        Ok(wins.iter().map(|win| self.get_win_props(*win)).collect())
-    }
-
-    fn get_root_win(&self) -> Result<Window, ()> {
-        self.x11.get_root_win().ok_or(())
-    }
-
-    fn get_all_wins(&self) -> Result<Vec<Window>, ()> {
-        let root_win = self.get_root_win()?;
-
-        let query_tree_reply = self
-            .x11
-            .conn
-            .query_tree(root_win)
-            .map_err(|_| ())?
-            .reply()
-            .map_err(|_| ())?;
-
-        Ok(query_tree_reply.children)
     }
 
     fn can_break(&self) -> Result<CanBreak, ()> {
-        let all_win_props: Vec<WinProps> = self.get_all_win_props()?;
+        let all_win_props: Vec<WindowInfo> = self.display.list_windows()?;
         let all_can_break_preds = CanBreakPreds::all();
         let can_break_bool = all_win_props.iter().all(|win_props| {
             all_can_break_preds.can_break(win_props).into_bool()
@@ -149,33 +28,33 @@ impl WindowTitles {
 
 struct CanBreakPred<F>(F);
 
-impl CanBreakPred<Box<dyn Fn(&WinProps) -> CanBreak>> {
+impl CanBreakPred<Box<dyn Fn(&WindowInfo) -> CanBreak>> {
     fn from_name_class<G>(g: G) -> Self
     where
         G: 'static + Fn(&str, &str, &str) -> CanBreak,
     {
-        Self(Box::new(move |win_props: &WinProps| {
+        Self(Box::new(move |win_props: &WindowInfo| {
             match (
                 &win_props.net_wm_name,
                 &win_props.class_name,
                 &win_props.class,
             ) {
                 (Ok(net_wm_name), Ok(class_name), Ok(class)) => {
-                    g(&net_wm_name, &class_name, &class)
+                    g(net_wm_name, class_name, class)
                 }
                 _ => CanBreak::Yes,
             }
         }))
     }
 
-    fn can_break(&self, win_props: &WinProps) -> CanBreak {
+    fn can_break(&self, win_props: &WindowInfo) -> CanBreak {
         self.0(win_props)
     }
 }
 
 struct CanBreakPreds<F>(Vec<CanBreakPred<F>>);
 
-impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
+impl CanBreakPreds<Box<dyn Fn(&WindowInfo) -> CanBreak>> {
     fn all() -> Self {
         Self(vec![
             // BigBlueButton in browser
@@ -283,7 +162,7 @@ impl CanBreakPreds<Box<dyn Fn(&WinProps) -> CanBreak>> {
         ])
     }
 
-    fn can_break(&self, win_props: &WinProps) -> CanBreak {
+    fn can_break(&self, win_props: &WindowInfo) -> CanBreak {
         CanBreak::from_bool(self.0.iter().all(|can_break_pred| {
             can_break_pred.can_break(win_props).into_bool()
         }))
@@ -350,61 +229,6 @@ fn browser_title_contains(
         CanBreak::No
     } else {
         CanBreak::Yes
-    }
-}
-
-const PROP_STARTING_OFFSET: u32 = 0;
-const PROP_LENGTH_TO_GET: u32 = 2048;
-
-#[derive(Clone, Debug)]
-struct WinProps {
-    #[allow(dead_code)]
-    wm_name: Result<String, ()>,
-    net_wm_name: Result<String, ()>,
-    #[allow(dead_code)]
-    transient_for_wins: Result<Vec<Window>, ()>,
-    class_name: Result<String, ()>,
-    class: Result<String, ()>,
-}
-
-struct ClassInfo<T> {
-    name: Result<String, T>,
-    class: Result<String, T>,
-}
-
-impl<T: Clone> ClassInfo<T> {
-    fn err(t: T) -> Self {
-        Self {
-            name: Err(t.clone()),
-            class: Err(t),
-        }
-    }
-
-    fn from_raw_data_with_index<F: Fn(std::string::FromUtf8Error) -> T>(
-        raw: &[u8],
-        index: usize,
-        utf8_err_mapper: F,
-    ) -> Self {
-        Self {
-            name: String::from_utf8(raw[0..index].to_vec())
-                .map_err(&utf8_err_mapper),
-            class: String::from_utf8(raw[index + 1..raw.len() - 1].to_vec())
-                .map_err(utf8_err_mapper),
-        }
-    }
-
-    fn from_raw_data<F: Fn(std::string::FromUtf8Error) -> T>(
-        raw: &[u8],
-        no_index_err: T,
-        utf8_err_mapper: F,
-    ) -> Self {
-        let option_index = raw.iter().position(|&b| b == 0);
-        match option_index {
-            None => Self::err(no_index_err),
-            Some(index) => {
-                Self::from_raw_data_with_index(raw, index, utf8_err_mapper)
-            }
-        }
     }
 }
 

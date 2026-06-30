@@ -21,7 +21,7 @@ pub struct Plugins(Vec<Box<dyn Plugin>>);
 
 impl Plugins {
     fn new(config: &Config) -> Result<Self, ()> {
-        let window_title_plugin = plugins::WindowTitles::new(config)?;
+        let window_title_plugin = plugins::WindowTitles::new(config);
         let google_calendar_plugin = plugins::GoogleCalendar::new(config)?;
         let all_plugins: Vec<Box<dyn Plugin>> = vec![
             Box::new(window_title_plugin),
