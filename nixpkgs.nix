@@ -1,9 +1,9 @@
 
 let
   nixpkgsSrc = builtins.fetchTarball {
-    # nixpkgs-21.05 as of 2021-06-05
-    url = https://github.com/NixOS/nixpkgs/archive/4c2e84394c0f372c019e941e95d6fbe21835719b.tar.gz;
-    sha256 = "099f5cgjrmkqbgdlhynghbbr32jlxr0fqigqfg2w421gk9vkhp4d";
+    # nixpkgs-unstable as of 2026-06-30
+    url = https://github.com/NixOS/nixpkgs/archive/9c4c05a947a91dc14625265fab505fb695e93218.tar.gz;
+    sha256 = "19n40n9skzv9i875r2db1pznf08078wqs7853ydcdmk1585s7q61";
   };
 
   # This is a derivation for actually building break-time using the Rust
@@ -29,7 +29,7 @@ let
           wrapGAppsHook
         ];
 
-        cargoSha256 = "0q6xdsd2bxc6y7d1f4c7i1a2fsh0wqmpxvp8397zmdqnqaszk58f";
+        cargoSha256 = "0q6xdsd2bxc6y7d1f4c7i1a2fsh0wqmpxvp8397zmdqnqaszk588";
       };
 
     # This is a development shell.  It should be run with nix-shell.  It
@@ -57,10 +57,10 @@ let
           llvmPackages.libclang
 
           # Some rust packages use pkgconfig when building.
-          pkgconfig
+          # pkgconfig
 
           # For creating the UI.
-          gnome3.glade
+          # gnome3.glade
         ];
 
         # libappindicator-sys generates bindings with bindgen, which uses LLVM and
@@ -76,12 +76,12 @@ let
 
           # Xorg libraries
           python3 # xcb crate uses python
-          xorg.libxcb
+          libxcb
         ];
 
         shellHook = ''
           # TODO: This clobbers MANPATH if it is already set.
-          export MANPATH=":${final.xorg.libxcb.man}/share/man"
+          export MANPATH=":${final.libxcb.man}/share/man"
         '';
 
         # These phases need to be set to noops so this shell file can actually be
