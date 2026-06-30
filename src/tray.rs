@@ -12,17 +12,17 @@ static IMG_STOPPED: &[u8] = include_bytes!("../imgs/clock-stopped.png");
 // static IMG2: &'static [u8] = include_bytes!("../imgs/clock-2.png");
 
 fn connect_activate<F>(
-    status_icon: *mut gtk_sys::GtkStatusIcon,
+    status_icon: *mut gtk::ffi::GtkStatusIcon,
     f: F,
 ) -> glib::signal::SignalHandlerId
 where
-    F: Fn(*mut gtk_sys::GtkStatusIcon) + 'static,
+    F: Fn(*mut gtk::ffi::GtkStatusIcon) + 'static,
 {
     unsafe extern "C" fn trampoline<G>(
-        this: *mut gtk_sys::GtkStatusIcon,
-        g: glib_sys::gpointer,
+        this: *mut gtk::ffi::GtkStatusIcon,
+        g: glib::ffi::gpointer,
     ) where
-        G: Fn(*mut gtk_sys::GtkStatusIcon) + 'static,
+        G: Fn(*mut gtk::ffi::GtkStatusIcon) + 'static,
     {
         let g: &G = &*(g as *const G);
         g(this);
@@ -30,14 +30,18 @@ where
 
     let f: Box<F> = Box::new(f);
     let raw_f: *mut F = Box::into_raw(f);
-    let signal_name = b"activate\0".as_ptr().cast::<std::os::raw::c_char>();
+    let signal_name = c"activate".as_ptr();
 
     unsafe {
+        let trampoline_fn: unsafe extern "C" fn(
+            *mut gtk::ffi::GtkStatusIcon,
+            glib::ffi::gpointer,
+        ) = trampoline::<F>;
         let raw_trampoline: unsafe extern "C" fn() =
-            std::mem::transmute(trampoline::<F> as usize);
+            std::mem::transmute(trampoline_fn);
 
         glib::signal::connect_raw(
-            status_icon.cast::<gobject_sys::GObject>(),
+            status_icon.cast::<glib::gobject_ffi::GObject>(),
             signal_name,
             Some(raw_trampoline),
             raw_f,
@@ -46,19 +50,19 @@ where
 }
 
 fn connect_popup_menu<F>(
-    status_icon: *mut gtk_sys::GtkStatusIcon,
+    status_icon: *mut gtk::ffi::GtkStatusIcon,
     f: F,
 ) -> glib::signal::SignalHandlerId
 where
-    F: Fn(*mut gtk_sys::GtkStatusIcon, u32, u32) + 'static,
+    F: Fn(*mut gtk::ffi::GtkStatusIcon, u32, u32) + 'static,
 {
     unsafe extern "C" fn trampoline<G>(
-        this: *mut gtk_sys::GtkStatusIcon,
+        this: *mut gtk::ffi::GtkStatusIcon,
         button: u32,
         activate_time: u32,
-        g: glib_sys::gpointer,
+        g: glib::ffi::gpointer,
     ) where
-        G: Fn(*mut gtk_sys::GtkStatusIcon, u32, u32) + 'static,
+        G: Fn(*mut gtk::ffi::GtkStatusIcon, u32, u32) + 'static,
     {
         let g: &G = &*(g as *const G);
         g(this, button, activate_time);
@@ -66,14 +70,20 @@ where
 
     let f: Box<F> = Box::new(f);
     let raw_f: *mut F = Box::into_raw(f);
-    let signal_name = b"popup-menu\0".as_ptr().cast::<std::os::raw::c_char>();
+    let signal_name = c"popup-menu".as_ptr();
 
     unsafe {
+        let trampoline_fn: unsafe extern "C" fn(
+            *mut gtk::ffi::GtkStatusIcon,
+            u32,
+            u32,
+            glib::ffi::gpointer,
+        ) = trampoline::<F>;
         let raw_trampoline: unsafe extern "C" fn() =
-            std::mem::transmute(trampoline::<F> as usize);
+            std::mem::transmute(trampoline_fn);
 
         glib::signal::connect_raw(
-            status_icon.cast::<gobject_sys::GObject>(),
+            status_icon.cast::<glib::gobject_ffi::GObject>(),
             signal_name,
             Some(raw_trampoline),
             raw_f,
@@ -82,19 +92,19 @@ where
 }
 
 pub fn signal_handler_disconnect(
-    status_icon: *mut gtk_sys::GtkStatusIcon,
+    status_icon: *mut gtk::ffi::GtkStatusIcon,
     handler_id: &glib::signal::SignalHandlerId,
 ) {
     unsafe {
-        gobject_sys::g_signal_handler_disconnect(
-            status_icon.cast::<gobject_sys::GObject>(),
-            handler_id.to_glib(),
+        glib::gobject_ffi::g_signal_handler_disconnect(
+            status_icon.cast::<glib::gobject_ffi::GObject>(),
+            handler_id.as_raw(),
         );
     }
 }
 
 pub struct Tray {
-    status_icon: *mut gtk_sys::GtkStatusIcon,
+    status_icon: *mut gtk::ffi::GtkStatusIcon,
     pixbuf: gdk_pixbuf::Pixbuf,
     pixbuf_stopped: gdk_pixbuf::Pixbuf,
     sender: glib::Sender<Msg>,
@@ -109,7 +119,7 @@ fn load_pixbuf(image_bytes: &[u8]) -> gdk_pixbuf::Pixbuf {
         .write(image_bytes)
         .expect("could not write image to pixbufloader");
     let pixbuf = pixbuf_loader
-        .get_pixbuf()
+        .pixbuf()
         .expect("could not get a pixbuf from the loaded image");
     pixbuf_loader
         .close()
@@ -123,16 +133,16 @@ impl Tray {
         let pixbuf = load_pixbuf(IMG);
         let pixbuf_stopped = load_pixbuf(IMG_STOPPED);
 
-        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf =
+        let pixbuf_sys: *mut gdk_pixbuf::ffi::GdkPixbuf =
             pixbuf.to_glib_none().0;
-        let status_icon: *mut gtk_sys::GtkStatusIcon;
+        let status_icon: *mut gtk::ffi::GtkStatusIcon;
 
         unsafe {
-            status_icon = gtk_sys::gtk_status_icon_new();
+            status_icon = gtk::ffi::gtk_status_icon_new();
 
-            gtk_sys::gtk_status_icon_set_from_pixbuf(status_icon, pixbuf_sys);
+            gtk::ffi::gtk_status_icon_set_from_pixbuf(status_icon, pixbuf_sys);
 
-            gtk_sys::gtk_status_icon_set_visible(status_icon, 1);
+            gtk::ffi::gtk_status_icon_set_visible(status_icon, 1);
         }
 
         let menu_right_click_signal_handler_id = None;
@@ -161,7 +171,7 @@ impl Tray {
 
     fn set_tooltip_text(&self, tooltip_text: &str) {
         unsafe {
-            gtk_sys::gtk_status_icon_set_tooltip_text(
+            gtk::ffi::gtk_status_icon_set_tooltip_text(
                 self.status_icon,
                 tooltip_text.to_glib_none().0,
             );
@@ -181,10 +191,10 @@ impl Tray {
     }
 
     fn render_pixbuf(&self, pixbuf: &gdk_pixbuf::Pixbuf) {
-        let pixbuf_sys: *mut gdk_pixbuf_sys::GdkPixbuf =
+        let pixbuf_sys: *mut gdk_pixbuf::ffi::GdkPixbuf =
             pixbuf.to_glib_none().0;
         unsafe {
-            gtk_sys::gtk_status_icon_set_from_pixbuf(
+            gtk::ffi::gtk_status_icon_set_from_pixbuf(
                 self.status_icon,
                 pixbuf_sys,
             );
@@ -201,7 +211,8 @@ impl Tray {
         let remaining_time_text = duration_to_text(remaining_time);
         let remaining_time_text_len = remaining_time_text.len();
 
-        let cr = cairo::Context::new(&image_surface);
+        let cr = cairo::Context::new(&image_surface)
+            .expect("should create cairo context");
         cr.select_font_face(
             "monospace",
             cairo::FontSlant::Normal,
@@ -216,7 +227,8 @@ impl Tray {
             cr.move_to(0.0, 750.0);
         }
 
-        cr.show_text(&remaining_time_text);
+        cr.show_text(&remaining_time_text)
+            .expect("should draw text onto the icon");
 
         let new_pixbuf =
             gdk::pixbuf_get_from_surface(&image_surface, 0, 0, 1000, 1000)
@@ -230,7 +242,7 @@ impl Tray {
 
         connect_activate(
             tray.status_icon,
-            move |_status_icon: *mut gtk_sys::GtkStatusIcon| {
+            move |_status_icon: *mut gtk::ffi::GtkStatusIcon| {
                 println!("clicked!!!");
             },
         );
@@ -277,14 +289,14 @@ impl Tray {
         let sender = self.sender.clone();
         let signal_handler_id = connect_popup_menu(
             self.status_icon,
-            move |_status_icon: *mut gtk_sys::GtkStatusIcon,
+            move |_status_icon: *mut gtk::ffi::GtkStatusIcon,
                   button,
                   activate_time| {
                 let menu = gtk::Menu::new();
 
                 match is_paused {
                     IsPaused::No => {
-                        let pause_item = gtk::MenuItem::new_with_label("Pause");
+                        let pause_item = gtk::MenuItem::with_label("Pause");
                         let sender_clone = sender.clone();
                         pause_item.connect_activate(move |_| {
                             sender_clone
@@ -294,8 +306,7 @@ impl Tray {
                         menu.append(&pause_item);
                     }
                     IsPaused::Yes => {
-                        let resume_item =
-                            gtk::MenuItem::new_with_label("Resume");
+                        let resume_item = gtk::MenuItem::with_label("Resume");
                         let sender_clone = sender.clone();
                         resume_item.connect_activate(move |_| {
                             sender_clone
@@ -309,9 +320,7 @@ impl Tray {
                 match is_idle_detector_enabled {
                     IsIdleDetectorEnabled::No => {
                         let enable_idle_detector_item =
-                            gtk::MenuItem::new_with_label(
-                                "Enable Idle Detector",
-                            );
+                            gtk::MenuItem::with_label("Enable Idle Detector");
                         let sender_clone = sender.clone();
                         enable_idle_detector_item.connect_activate(move |_| {
                             sender_clone.send(Msg::EnableIdleDetector).expect(
@@ -322,9 +331,7 @@ impl Tray {
                     }
                     IsIdleDetectorEnabled::Yes => {
                         let disable_idle_detector_item =
-                            gtk::MenuItem::new_with_label(
-                                "Disable Idle Detector",
-                            );
+                            gtk::MenuItem::with_label("Disable Idle Detector");
                         let sender_clone = sender.clone();
                         disable_idle_detector_item.connect_activate(
                             move |_| {
@@ -339,7 +346,7 @@ impl Tray {
                     }
                 }
 
-                let quit_item = gtk::MenuItem::new_with_label("Quit");
+                let quit_item = gtk::MenuItem::with_label("Quit");
                 let sender_clone = sender.clone();
                 quit_item.connect_activate(move |_| {
                     sender_clone
@@ -363,7 +370,7 @@ impl Tray {
     }
 
     pub fn update_time_remaining(&self, remaining_time: Duration) {
-        if remaining_time <= Duration::from_secs(5 * 60) {
+        if remaining_time <= Duration::from_mins(5) {
             self.render_time_remaining_before_break(remaining_time);
         }
 
@@ -384,7 +391,7 @@ pub enum IsIdleDetectorEnabled {
 }
 
 fn duration_to_text(duration: Duration) -> String {
-    if duration > Duration::from_secs(60) {
+    if duration > Duration::from_mins(1) {
         format!("{}m", duration.as_secs() / 60)
     } else {
         duration.as_secs().to_string()

@@ -1,16 +1,16 @@
-use crate::prelude::*;
-
-use byteorder::{LittleEndian, ReadBytesExt};
+use x11rb::connection::Connection;
+use x11rb::protocol::xproto::{Atom, AtomEnum, ConnectionExt, Window};
+use x11rb::rust_connection::RustConnection;
 
 pub struct X11 {
-    pub conn: xcb::Connection,
-    pub preferred_screen: i32,
+    pub conn: RustConnection,
+    pub preferred_screen: usize,
 }
 
 impl X11 {
     pub fn connect() -> Self {
-        let (conn, preferred_screen) = xcb::Connection::connect(None)
-            .expect("Could not connect to X server");
+        let (conn, preferred_screen) =
+            x11rb::connect(None).expect("Could not connect to X server");
 
         Self {
             conn,
@@ -18,56 +18,40 @@ impl X11 {
         }
     }
 
-    pub fn create_atom(&self, atom_name: &str) -> Option<xcb::Atom> {
-        let net_wm_name_atom_cookie =
-            xcb::intern_atom(&self.conn, false, atom_name);
-
-        net_wm_name_atom_cookie
-            .get_reply()
+    pub fn create_atom(&self, atom_name: &str) -> Option<Atom> {
+        self.conn
+            .intern_atom(false, atom_name.as_bytes())
+            .ok()?
+            .reply()
             .ok()
-            .map(|rep| rep.atom())
+            .map(|rep| rep.atom)
     }
 
-    pub fn get_root_win(&self) -> Option<xcb::Window> {
-        let setup: xcb::Setup = self.conn.get_setup();
-        let mut roots: xcb::ScreenIterator = setup.roots();
-        let preferred_screen_pos = usize::try_from(self.preferred_screen)
-            .expect("x11 preferred_screen is not positive");
-        roots.nth(preferred_screen_pos).map(|screen| screen.root())
+    pub fn get_root_win(&self) -> Option<Window> {
+        let setup = self.conn.setup();
+        setup
+            .roots
+            .get(self.preferred_screen)
+            .map(|screen| screen.root)
     }
 
-    pub fn get_win_prop(
-        &self,
-        win: xcb::Window,
-        atom: xcb::Atom,
-    ) -> Option<xcb::Window> {
-        let reply = xcb::get_property(
-            &self.conn,
-            false,
-            win,
-            atom,
-            xcb::ATOM_WINDOW,
-            0,
-            1,
-        )
-        .get_reply()
-        .ok()?;
+    pub fn get_win_prop(&self, win: Window, atom: Atom) -> Option<Window> {
+        let reply = self
+            .conn
+            .get_property(false, win, atom, AtomEnum::WINDOW, 0, 1)
+            .ok()?
+            .reply()
+            .ok()?;
 
         // No value available, or the value is more than 1 (which is unexpected).
-        if reply.value_len() != 1 {
+        if reply.value_len != 1 {
             return None;
         }
 
-        let mut raw = reply.value();
+        // Window properties are expected to be 32-bit values.
+        let window = reply.value32()?.next()?;
 
-        // Window properties are expected to be 4 bytes.
-        if raw.len() != 4 {
-            return None;
-        }
-
-        let window = raw.read_u32::<LittleEndian>().unwrap() as xcb::Window;
-
-        if window == xcb::WINDOW_NONE {
+        if window == x11rb::NONE {
             None
         } else {
             Some(window)

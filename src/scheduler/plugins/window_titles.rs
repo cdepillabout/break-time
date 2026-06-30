@@ -1,14 +1,14 @@
 use super::{CanBreak, Plugin};
 
 use crate::config::Config;
-use crate::prelude::*;
-
 use crate::x11::X11;
+
+use x11rb::protocol::xproto::{Atom, AtomEnum, ConnectionExt as _, Window};
 
 pub struct WindowTitles {
     x11: X11,
-    net_wm_name_atom: xcb::Atom,
-    utf8_string_atom: xcb::Atom,
+    net_wm_name_atom: Atom,
+    utf8_string_atom: Atom,
 }
 
 impl WindowTitles {
@@ -25,96 +25,115 @@ impl WindowTitles {
         })
     }
 
-    fn request_win_props(&'_ self, win: xcb::Window) -> WinPropCookies<'_> {
-        let wm_name_cookie = xcb::xproto::get_property(
-            &self.x11.conn,
-            false,
-            win,
-            xcb::xproto::ATOM_WM_NAME,
-            xcb::xproto::ATOM_STRING,
-            PROP_STARTING_OFFSET,
-            PROP_LENGTH_TO_GET,
-        );
+    fn get_string_prop(
+        &self,
+        win: Window,
+        property: Atom,
+        type_: Atom,
+    ) -> Result<String, ()> {
+        let reply = self
+            .x11
+            .conn
+            .get_property(
+                false,
+                win,
+                property,
+                type_,
+                PROP_STARTING_OFFSET,
+                PROP_LENGTH_TO_GET,
+            )
+            .map_err(|_| ())?
+            .reply()
+            .map_err(|_| ())?;
+        String::from_utf8(reply.value).map_err(|_| ())
+    }
 
-        let net_wm_name_cookie = xcb::xproto::get_property(
-            &self.x11.conn,
-            false,
-            win,
-            self.net_wm_name_atom,
-            self.utf8_string_atom,
-            PROP_STARTING_OFFSET,
-            PROP_LENGTH_TO_GET,
-        );
+    fn get_class_info(&self, win: Window) -> ClassInfo<()> {
+        let res_value = self
+            .x11
+            .conn
+            .get_property(
+                false,
+                win,
+                AtomEnum::WM_CLASS,
+                AtomEnum::STRING,
+                PROP_STARTING_OFFSET,
+                PROP_LENGTH_TO_GET,
+            )
+            .map_err(|_| ())
+            .and_then(|cookie| cookie.reply().map_err(|_| ()));
 
-        let wm_class_cookie = xcb::xproto::get_property(
-            &self.x11.conn,
-            false,
-            win,
-            xcb::xproto::ATOM_WM_CLASS,
-            xcb::xproto::ATOM_STRING,
-            PROP_STARTING_OFFSET,
-            PROP_LENGTH_TO_GET,
-        );
-
-        let wm_transient_for_cookie = xcb::xproto::get_property(
-            &self.x11.conn,
-            false,
-            win,
-            xcb::xproto::ATOM_WM_TRANSIENT_FOR,
-            xcb::xproto::ATOM_WINDOW,
-            PROP_STARTING_OFFSET,
-            PROP_LENGTH_TO_GET,
-        );
-
-        WinPropCookies {
-            wm_name: wm_name_cookie,
-            net_wm_name: net_wm_name_cookie,
-            wm_class: wm_class_cookie,
-            wm_transient_for: wm_transient_for_cookie,
+        match res_value {
+            Err(()) => ClassInfo::err(()),
+            Ok(reply) => ClassInfo::from_raw_data(&reply.value, (), |_| ()),
         }
     }
 
-    fn request_all_win_props<'a>(
-        &'a self,
-        wins: &[xcb::Window],
-    ) -> Vec<WinPropCookies<'a>> {
-        wins.iter()
-            .map(|win| self.request_win_props(*win))
-            .collect()
+    fn get_transient_for(&self, win: Window) -> Result<Vec<Window>, ()> {
+        let reply = self
+            .x11
+            .conn
+            .get_property(
+                false,
+                win,
+                AtomEnum::WM_TRANSIENT_FOR,
+                AtomEnum::WINDOW,
+                PROP_STARTING_OFFSET,
+                PROP_LENGTH_TO_GET,
+            )
+            .map_err(|_| ())?
+            .reply()
+            .map_err(|_| ())?;
+        Ok(reply.value32().map(Iterator::collect).unwrap_or_default())
     }
 
-    fn get_all_win_props_from_wins(
-        &self,
-        wins: &[xcb::Window],
-    ) -> Vec<WinProps> {
-        let win_prop_cookies: Vec<WinPropCookies> =
-            self.request_all_win_props(wins);
-        WinProps::get_all(win_prop_cookies)
+    fn get_win_props(&self, win: Window) -> WinProps {
+        let wm_name = self.get_string_prop(
+            win,
+            AtomEnum::WM_NAME.into(),
+            AtomEnum::STRING.into(),
+        );
+        let net_wm_name = self.get_string_prop(
+            win,
+            self.net_wm_name_atom,
+            self.utf8_string_atom,
+        );
+        let transient_for_wins = self.get_transient_for(win);
+        let ClassInfo {
+            name: class_name,
+            class,
+        } = self.get_class_info(win);
+
+        WinProps {
+            wm_name,
+            net_wm_name,
+            transient_for_wins,
+            class_name,
+            class,
+        }
     }
 
     fn get_all_win_props(&self) -> Result<Vec<WinProps>, ()> {
         let wins = self.get_all_wins()?;
-        Ok(self.get_all_win_props_from_wins(&wins))
+        Ok(wins.iter().map(|win| self.get_win_props(*win)).collect())
     }
 
-    fn get_root_win(&self) -> Result<xcb::Window, ()> {
-        let setup: xcb::Setup = self.x11.conn.get_setup();
-        let mut roots: xcb::ScreenIterator = setup.roots();
-        let preferred_screen_pos = usize::try_from(self.x11.preferred_screen)
-            .expect("x11 preferred_screen is not positive");
-        let screen: xcb::Screen = roots.nth(preferred_screen_pos).ok_or(())?;
-        Ok(screen.root())
+    fn get_root_win(&self) -> Result<Window, ()> {
+        self.x11.get_root_win().ok_or(())
     }
 
-    fn get_all_wins(&self) -> Result<Vec<xcb::Window>, ()> {
+    fn get_all_wins(&self) -> Result<Vec<Window>, ()> {
         let root_win = self.get_root_win()?;
 
-        let query_tree_reply: xcb::QueryTreeReply =
-            xcb::xproto::query_tree(&self.x11.conn, root_win)
-                .get_reply()
-                .map_err(|_| ())?;
+        let query_tree_reply = self
+            .x11
+            .conn
+            .query_tree(root_win)
+            .map_err(|_| ())?
+            .reply()
+            .map_err(|_| ())?;
 
-        Ok(query_tree_reply.children().to_vec())
+        Ok(query_tree_reply.children)
     }
 
     fn can_break(&self) -> Result<CanBreak, ()> {
@@ -337,74 +356,15 @@ fn browser_title_contains(
 const PROP_STARTING_OFFSET: u32 = 0;
 const PROP_LENGTH_TO_GET: u32 = 2048;
 
-struct WinPropCookies<'a> {
-    wm_name: xcb::xproto::GetPropertyCookie<'a>,
-    net_wm_name: xcb::xproto::GetPropertyCookie<'a>,
-    wm_class: xcb::xproto::GetPropertyCookie<'a>,
-    wm_transient_for: xcb::xproto::GetPropertyCookie<'a>,
-}
-
 #[derive(Clone, Debug)]
 struct WinProps {
     #[allow(dead_code)]
     wm_name: Result<String, ()>,
     net_wm_name: Result<String, ()>,
     #[allow(dead_code)]
-    transient_for_wins: Result<Vec<xcb::Window>, ()>,
+    transient_for_wins: Result<Vec<Window>, ()>,
     class_name: Result<String, ()>,
     class: Result<String, ()>,
-}
-
-impl WinProps {
-    fn get_all(all_win_prop_cookies: Vec<WinPropCookies>) -> Vec<Self> {
-        all_win_prop_cookies.into_iter().map(Self::get).collect()
-    }
-
-    fn get(win_prop_cookies: WinPropCookies) -> Self {
-        let wm_name = win_prop_cookies
-            .wm_name
-            .get_reply()
-            .map_err(|_generic_err| ())
-            .and_then(|wm_name_reply| {
-                let wm_name_vec = wm_name_reply.value().to_vec();
-                String::from_utf8(wm_name_vec).map_err(|_from_utf8_err| ())
-            });
-
-        let net_wm_name = win_prop_cookies
-            .net_wm_name
-            .get_reply()
-            .map_err(|_generic_err| ())
-            .and_then(|net_wm_name_reply| {
-                let net_wm_name_vec = net_wm_name_reply.value().to_vec();
-                String::from_utf8(net_wm_name_vec).map_err(|_from_utf8_err| ())
-            });
-
-        let transient_for_wins = win_prop_cookies
-            .wm_transient_for
-            .get_reply()
-            .map_err(|_generic_err| ())
-            .map(|trans_reply| trans_reply.value().to_vec());
-
-        let ClassInfo {
-            name: class_name,
-            class,
-        } = ClassInfo::from_raw(
-            win_prop_cookies
-                .wm_class
-                .get_reply()
-                .map_err(|_generic_error| ()),
-            (),
-            |_from_utf8_err| (),
-        );
-
-        Self {
-            wm_name,
-            net_wm_name,
-            transient_for_wins,
-            class_name,
-            class,
-        }
-    }
 }
 
 struct ClassInfo<T> {
@@ -446,33 +406,13 @@ impl<T: Clone> ClassInfo<T> {
             }
         }
     }
-
-    fn from_raw<F: Fn(std::string::FromUtf8Error) -> T>(
-        res_raw: Result<xcb::GetPropertyReply, T>,
-        no_index_err: T,
-        utf8_err_mapper: F,
-    ) -> Self {
-        match res_raw {
-            Err(t) => Self::err(t),
-            Ok(raw) => {
-                let all = raw.value::<u8>();
-                Self::from_raw_data(all, no_index_err, utf8_err_mapper)
-            }
-        }
-    }
 }
 
 impl Plugin for WindowTitles {
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
-        let custom_error = std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "TODO: change this to an actual error",
-        );
+        let custom_error =
+            std::io::Error::other("TODO: change this to an actual error");
         self.can_break()
             .map_err(|()| Box::new(custom_error) as Box<dyn std::error::Error>)
-    }
-
-    fn name(&self) -> String {
-        String::from("window_titles")
     }
 }

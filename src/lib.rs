@@ -2,10 +2,31 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![warn(clippy::nursery)]
 #![allow(
+    // Explicit `&` borrows are kept for readability; the removals this lint
+    // suggests are stylistic and not worth the churn.
     clippy::needless_borrow,
+    // We prefer the readable `.expect(&format!(...))` form over
+    // `unwrap_or_else(|| panic!(...))`. None of these are hot paths, so
+    // eagerly building the message even on the success path is fine.
     clippy::expect_fun_call,
+    // A `match` with one real arm plus `_` often reads more clearly than the
+    // `if let ... else` this lint wants.
     clippy::single_match_else,
-    clippy::match_same_arms
+    // `Settings.all_plugin_settings` ends with its type name (`PluginSettings`),
+    // but the field name is clear and renaming it gains nothing.
+    clippy::struct_field_names,
+    // break-time is a binary, not a published library: `run` / `default_main` /
+    // `start_break` are internal entry points, so `# Panics` doc sections would
+    // be pure noise.
+    clippy::missing_panics_doc,
+    // We intentionally `{:?}`-format `PathBuf`s in panic/error messages — the
+    // quoting and escaping is useful when diagnosing a bad path, and these are
+    // developer-facing panics, not user-facing output.
+    clippy::unnecessary_debug_formatting,
+    // This nursery lint rewrites `if let { ... } else { ... }` into
+    // `map_or_else` with two side-effecting closures, which is less readable
+    // than the explicit form in the places it fires here.
+    clippy::option_if_let_else
 )]
 
 mod config;
@@ -86,8 +107,12 @@ fn handle_msg_recv(
 pub fn run(config: Config) {
     gtk::init().expect("Could not initialize GTK");
 
+    // `MainContext::channel` is deprecated in glib 0.18 (removed in 0.20) in favour of
+    // async-channel + `spawn_future_local`.  Migrating the synchronous `Msg`/`Message` plumbing to
+    // async channels is deferred to a later glib/GTK upgrade; suppress the deprecation for now.
+    #[allow(deprecated)]
     let (sender, receiver) =
-        glib::MainContext::channel(glib::source::PRIORITY_DEFAULT);
+        glib::MainContext::channel(glib::Priority::DEFAULT);
 
     let mut tray = tray::Tray::run(&config, sender.clone());
 
@@ -104,7 +129,7 @@ pub fn run(config: Config) {
             &mut tray,
             msg,
         );
-        glib::source::Continue(true)
+        glib::ControlFlow::Continue
     });
 
     gtk::main();

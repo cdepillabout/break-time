@@ -182,7 +182,7 @@ impl Scheduler {
         }
     }
 
-    fn wait_until_break(&mut self) -> WaitUntilBreakResult {
+    fn wait_until_break(&self) -> WaitUntilBreakResult {
         loop {
             let waiting_result = self.send_msgs_while_waiting();
             match waiting_result {
@@ -208,7 +208,7 @@ impl Scheduler {
                             "There have been some errors from our plugins:"
                         );
                         for e in errs {
-                            println!("{}", e);
+                            println!("{e}");
                         }
                         println!("Sleeping again just to be safe...");
                     }
@@ -226,7 +226,7 @@ impl Scheduler {
         }
     }
 
-    fn send_msgs_while_waiting(&mut self) -> WaitingResult {
+    fn send_msgs_while_waiting(&self) -> WaitingResult {
         self.sender.send(super::Msg::ResetSysTrayIcon).expect(
             "TODO: figure out what to do about channels potentially failing",
         );
@@ -235,7 +235,7 @@ impl Scheduler {
             create_periods_to_send_time_left_message(self.time_until_break)
         {
             let opt_time_to_sleep = remaining_time.checked_sub(period);
-            println!("In send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}", period, remaining_time, opt_time_to_sleep);
+            println!("In send_msgs_while_waiting loop for period {period:?}, remaining_time: {remaining_time:?}, time_to_sleep: {opt_time_to_sleep:?}");
             match opt_time_to_sleep {
                 None => {
                     // This happens when the periods to send the time-left message are greater than
@@ -248,8 +248,7 @@ impl Scheduler {
                     match res {
                         Ok(InnerMsg::HasBeenIdle) => {
                             println!(
-                                "\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got HasBeenIdle message",
-                                period, remaining_time, opt_time_to_sleep);
+                                "\tIn send_msgs_while_waiting loop for period {period:?}, remaining_time: {remaining_time:?}, time_to_sleep: {opt_time_to_sleep:?}, got HasBeenIdle message");
 
                             if self
                                 .idle_detection_enabled
@@ -259,13 +258,11 @@ impl Scheduler {
                             }
                         }
                         Ok(InnerMsg::Pause) => {
-                            println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got Pause message",
-                                period, remaining_time, opt_time_to_sleep);
+                            println!("\tIn send_msgs_while_waiting loop for period {period:?}, remaining_time: {remaining_time:?}, time_to_sleep: {opt_time_to_sleep:?}, got Pause message");
                             return WaitingResult::Paused;
                         }
                         Ok(InnerMsg::EnableIdleDetector) => {
-                            println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got EnableIdleDetector message",
-                                period, remaining_time, opt_time_to_sleep);
+                            println!("\tIn send_msgs_while_waiting loop for period {period:?}, remaining_time: {remaining_time:?}, time_to_sleep: {opt_time_to_sleep:?}, got EnableIdleDetector message");
 
                             self.idle_detection_enabled
                                 .store(true, Ordering::Relaxed);
@@ -277,8 +274,7 @@ impl Scheduler {
                             remaining_time -= time_to_sleep;
                         }
                         Ok(InnerMsg::DisableIdleDetector) => {
-                            println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, got DisableIdleDetector message",
-                                period, remaining_time, opt_time_to_sleep);
+                            println!("\tIn send_msgs_while_waiting loop for period {period:?}, remaining_time: {remaining_time:?}, time_to_sleep: {opt_time_to_sleep:?}, got DisableIdleDetector message");
 
                             self.idle_detection_enabled
                                 .store(false, Ordering::Relaxed);
@@ -290,8 +286,7 @@ impl Scheduler {
                             remaining_time -= time_to_sleep;
                         }
                         Err(_) => {
-                            println!("\tIn send_msgs_while_waiting loop for period {:?}, remaining_time: {:?}, time_to_sleep: {:?}, timeout no message",
-                                period, remaining_time, opt_time_to_sleep);
+                            println!("\tIn send_msgs_while_waiting loop for period {period:?}, remaining_time: {remaining_time:?}, time_to_sleep: {opt_time_to_sleep:?}, timeout no message");
                             self.sender.send(
                                 super::Msg::TimeRemainingBeforeBreak(period),
                             ).expect("TODO: figure out what to do about channels potentially failing");
@@ -343,16 +338,15 @@ mod tests {
 
     #[test]
     fn test_periods_to_send_time_left_message() {
-        let res = create_periods_to_send_time_left_message(
-            Duration::from_secs(5 * 60),
-        );
+        let res =
+            create_periods_to_send_time_left_message(Duration::from_mins(5));
 
         let periods_to_send_time_left_message_expected = vec![
-            Duration::from_secs(60 * 5),
-            Duration::from_secs(60 * 4),
-            Duration::from_secs(60 * 3),
-            Duration::from_secs(60 * 2),
-            Duration::from_secs(60),
+            Duration::from_mins(5),
+            Duration::from_mins(4),
+            Duration::from_mins(3),
+            Duration::from_mins(2),
+            Duration::from_mins(1),
             Duration::from_secs(59),
             Duration::from_secs(58),
             Duration::from_secs(57),

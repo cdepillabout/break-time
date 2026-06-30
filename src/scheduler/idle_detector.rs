@@ -19,28 +19,27 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
+use x11rb::connection::Connection;
+use x11rb::protocol::screensaver::ConnectionExt as _;
+use x11rb::protocol::xproto::Window;
+use x11rb::rust_connection::RustConnection;
+
 use super::InnerMsg;
 use crate::config::Config;
-use crate::prelude::*;
 
 const SLEEP_SECONDS: u64 = 20;
 const SLEEP_MILLISECONDS: u128 = (SLEEP_SECONDS as u128) * 1000;
 
 pub struct IdleDetector {
-    conn: xcb::Connection,
-    root_window: xcb::Window,
+    conn: RustConnection,
+    root_window: Window,
     restart_wait_time_sender: Sender<InnerMsg>,
 }
 
 impl IdleDetector {
     pub fn new(restart_wait_time_sender: Sender<InnerMsg>) -> Self {
-        let (conn, screen_num) = xcb::Connection::connect(None).unwrap();
-        let setup: xcb::Setup = conn.get_setup();
-        let mut roots: xcb::ScreenIterator = setup.roots();
-        let preferred_screen_pos = usize::try_from(screen_num)
-            .expect("x11 preferred_screen is not positive");
-        let screen: xcb::Screen = roots.nth(preferred_screen_pos).unwrap();
-        let root_window: xcb::Window = screen.root();
+        let (conn, screen_num) = x11rb::connect(None).unwrap();
+        let root_window = conn.setup().roots[screen_num].root;
 
         Self {
             conn,
@@ -77,20 +76,17 @@ impl IdleDetector {
             let suspend_milliseconds: u128 =
                 time_difference_milliseconds.saturating_sub(SLEEP_MILLISECONDS);
 
-            let idle_query_res = xcb::screensaver::query_info(
-                &idle_detector.conn,
-                idle_detector.root_window,
-            )
-            .get_reply()
-            .unwrap();
+            let idle_query_res = idle_detector
+                .conn
+                .screensaver_query_info(idle_detector.root_window)
+                .unwrap()
+                .reply()
+                .unwrap();
 
-            let ms_since_user_input = idle_query_res.ms_since_user_input();
+            let ms_since_user_input = idle_query_res.ms_since_user_input;
 
             println!(
-                "idle detector: ms_since_user_input: {}, suspend_milliseconds: {}, idle_detection_milliseconds: {}",
-                ms_since_user_input,
-                suspend_milliseconds,
-                idle_detection_milliseconds,
+                "idle detector: ms_since_user_input: {ms_since_user_input}, suspend_milliseconds: {suspend_milliseconds}, idle_detection_milliseconds: {idle_detection_milliseconds}",
             );
 
             if has_been_idle(
@@ -136,6 +132,6 @@ mod tests {
         // total.
         let res = has_been_idle(20000, 10000, 15000);
 
-        assert_eq!(res, true);
+        assert!(res);
     }
 }

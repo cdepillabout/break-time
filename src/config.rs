@@ -103,7 +103,7 @@ impl Config {
         let config_file_name = "config.toml";
         let config_file_path = match &opts.conf_dir {
             Some(conf_dir) => {
-                std::fs::create_dir_all(&conf_dir).map_err(|_io_err| ())?;
+                std::fs::create_dir_all(conf_dir).map_err(|_io_err| ())?;
                 conf_dir.join(config_file_name)
             }
             None => {
@@ -143,9 +143,7 @@ impl Config {
                     Ok(()) => (),
                     Err(err) =>
                         panic!(
-                            "Couldn't write a new config file at {:?} because of the following error: {}",
-                            config_file_path,
-                            err
+                            "Couldn't write a new config file at {config_file_path:?} because of the following error: {err}"
                         ),
                 }
                 Settings::default()
@@ -155,9 +153,7 @@ impl Config {
                 match res_settings {
                     Err(err) => {
                         panic!(
-                            "Can't parse config file at {:?} because of the following error: {}",
-                            config_file_path,
-                            err
+                            "Can't parse config file at {config_file_path:?} because of the following error: {err}"
                         )
                     }
                     Ok(settings) => settings,
@@ -181,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_default_settings_constant_is_same_as_default_impl() {
-        let settings_from_default_instance: Settings = Default::default();
+        let settings_from_default_instance: Settings = Settings::default();
         let settings_from_default_const: Settings =
             toml::from_str(DEFAULT_CONFIG_SETTINGS).unwrap();
 

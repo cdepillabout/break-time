@@ -13,27 +13,25 @@ pub enum Message {
 
 #[derive(Clone, Debug)]
 pub struct Monitor {
-    pub id: i32,
     pub monitor: gdk::Monitor,
 }
 
 impl Monitor {
-    pub const fn new(id: i32, monitor: gdk::Monitor) -> Self {
-        Self { id, monitor }
+    pub const fn new(monitor: gdk::Monitor) -> Self {
+        Self { monitor }
     }
 
     pub fn new_from_id(display: &gdk::Display, id: i32) -> Self {
-        let mon = display.get_monitor(id).expect(&format!(
-            "Could not get monitor for monitor index {:?}",
-            id
-        ));
-        Self::new(id, mon)
+        let mon = display
+            .monitor(id)
+            .expect(&format!("Could not get monitor for monitor index {id:?}"));
+        Self::new(mon)
     }
 
     pub fn all() -> Vec<Self> {
-        let default_display = gdk::Display::get_default()
+        let default_display = gdk::Display::default()
             .expect("gdk should always find a Display when it runs");
-        let num_monitors = default_display.get_n_monitors();
+        let num_monitors = default_display.n_monitors();
         (0..num_monitors)
             .map(|monitor_index| {
                 Self::new_from_id(&default_display, monitor_index)
@@ -52,7 +50,7 @@ impl std::ops::Deref for Monitor {
 
 impl AsRef<gdk::Monitor> for Monitor {
     fn as_ref(&self) -> &gdk::Monitor {
-        &*self
+        self
     }
 }
 
@@ -91,14 +89,14 @@ impl State {
         }
     }
 
-    pub fn read_presses_remaining(&self) -> RwLockReadGuard<u32> {
+    pub fn read_presses_remaining(&self) -> RwLockReadGuard<'_, u32> {
         self.presses_remaining.read().unwrap()
     }
 
     /// Decrements the number of presses remaining by 1.
     pub fn decrement_presses_remaining(&self) -> u32 {
         let state_presses_remaining: &mut u32 =
-            &mut *self.presses_remaining.write().unwrap();
+            &mut self.presses_remaining.write().unwrap();
 
         if *state_presses_remaining > 0 {
             *state_presses_remaining -= 1;

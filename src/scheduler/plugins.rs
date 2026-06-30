@@ -28,8 +28,7 @@ impl CanBreak {
 
     pub const fn combine(self, other: Self) -> Self {
         match (self, other) {
-            (Self::No, _) => Self::No,
-            (_, Self::No) => Self::No,
+            (Self::No, _) | (_, Self::No) => Self::No,
             _ => Self::Yes,
         }
     }
@@ -37,16 +36,10 @@ impl CanBreak {
 
 pub trait Plugin {
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>>;
-
-    fn name(&self) -> String;
 }
 
 impl Plugin for Box<dyn Plugin> {
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
         (**self).can_break_now()
-    }
-
-    fn name(&self) -> String {
-        (**self).name()
     }
 }

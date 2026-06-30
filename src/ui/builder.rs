@@ -14,9 +14,8 @@ where
         &self,
         name: &str,
     ) -> T {
-        self.get_object(name).expect(&format!(
-            "Expected to get \"{}\" from the builder, but failed.",
-            name
+        self.object(name).expect(&format!(
+            "Expected to get \"{name}\" from the builder, but failed."
         ))
     }
 }
@@ -24,5 +23,5 @@ where
 #[must_use]
 pub fn create() -> gtk::Builder {
     let glade_src = include_str!("../../glade/ui.glade");
-    gtk::Builder::new_from_string(glade_src)
+    gtk::Builder::from_string(glade_src)
 }

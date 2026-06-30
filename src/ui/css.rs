@@ -1,7 +1,7 @@
 use super::prelude::*;
 
 pub fn setup(window: &gtk::Window) {
-    let screen: gdk::Screen = match window.get_screen() {
+    let screen: gdk::Screen = match gtk::prelude::WidgetExt::screen(window) {
         Some(screen) => screen,
         None => {
             println!("Failed to get the screen for window.");
@@ -11,8 +11,8 @@ pub fn setup(window: &gtk::Window) {
     let css_provider = gtk::CssProvider::new();
     let css_src = include_str!("../../style/style.css");
     match css_provider.load_from_data(css_src.as_bytes()) {
-        Err(err) => println!("Failed to load css provider from data: {}", err),
-        Ok(_) => {
+        Err(err) => println!("Failed to load css provider from data: {err}"),
+        Ok(()) => {
             gtk::StyleContext::add_provider_for_screen(
                 &screen,
                 &css_provider,
