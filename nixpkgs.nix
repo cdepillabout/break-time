@@ -51,13 +51,14 @@ let
           cargo
           rustc
           rustfmt
+          clippy
 
           # Some rust packages use clang to compile c bindings.
           llvmPackages.clang
           llvmPackages.libclang
 
           # Some rust packages use pkgconfig when building.
-          # pkgconfig
+          pkg-config
 
           # For creating the UI.
           # gnome3.glade
