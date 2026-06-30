@@ -31,9 +31,9 @@
 
 mod config;
 mod opts;
+mod platform;
 mod prelude;
 mod scheduler;
-mod tray;
 pub mod ui;
 mod x11;
 
@@ -41,8 +41,8 @@ use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 use config::Config;
+use platform::{IsIdleDetectorEnabled, TrayImpl as Tray};
 use scheduler::Scheduler;
-use tray::Tray;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Msg {
@@ -94,11 +94,11 @@ fn handle_msg_recv(
             tray.update_time_remaining(remaining_time);
         }
         Msg::EnableIdleDetector => {
-            tray.set_is_idle_detector_enabled(tray::IsIdleDetectorEnabled::Yes);
+            tray.set_is_idle_detector_enabled(IsIdleDetectorEnabled::Yes);
             scheduler_inner_sender.send(scheduler::InnerMsg::EnableIdleDetector).expect("TODO: figure out what to do about channels potentially failing");
         }
         Msg::DisableIdleDetector => {
-            tray.set_is_idle_detector_enabled(tray::IsIdleDetectorEnabled::No);
+            tray.set_is_idle_detector_enabled(IsIdleDetectorEnabled::No);
             scheduler_inner_sender.send(scheduler::InnerMsg::DisableIdleDetector).expect("TODO: figure out what to do about channels potentially failing");
         }
     }
@@ -114,7 +114,7 @@ pub fn run(config: Config) {
     let (sender, receiver) =
         glib::MainContext::channel(glib::Priority::DEFAULT);
 
-    let mut tray = tray::Tray::run(&config, sender.clone());
+    let mut tray = Tray::run(&config, sender.clone());
 
     println!("Starting the scheduler...");
     let (scheduler_outer_sender, scheduler_inner_sender) =
