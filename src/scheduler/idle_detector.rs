@@ -19,31 +19,23 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
-use x11rb::connection::Connection;
-use x11rb::protocol::screensaver::ConnectionExt as _;
-use x11rb::protocol::xproto::Window;
-use x11rb::rust_connection::RustConnection;
-
 use super::InnerMsg;
 use crate::config::Config;
+use crate::platform::create_display;
+use crate::platform::display::DisplayBackend;
 
 const SLEEP_SECONDS: u64 = 20;
 const SLEEP_MILLISECONDS: u128 = (SLEEP_SECONDS as u128) * 1000;
 
 pub struct IdleDetector {
-    conn: RustConnection,
-    root_window: Window,
+    display: Box<dyn DisplayBackend>,
     restart_wait_time_sender: Sender<InnerMsg>,
 }
 
 impl IdleDetector {
     pub fn new(restart_wait_time_sender: Sender<InnerMsg>) -> Self {
-        let (conn, screen_num) = x11rb::connect(None).unwrap();
-        let root_window = conn.setup().roots[screen_num].root;
-
         Self {
-            conn,
-            root_window,
+            display: create_display(),
             restart_wait_time_sender,
         }
     }
@@ -76,14 +68,8 @@ impl IdleDetector {
             let suspend_milliseconds: u128 =
                 time_difference_milliseconds.saturating_sub(SLEEP_MILLISECONDS);
 
-            let idle_query_res = idle_detector
-                .conn
-                .screensaver_query_info(idle_detector.root_window)
-                .unwrap()
-                .reply()
-                .unwrap();
-
-            let ms_since_user_input = idle_query_res.ms_since_user_input;
+            let ms_since_user_input =
+                idle_detector.display.idle_time().as_millis();
 
             println!(
                 "idle detector: ms_since_user_input: {ms_since_user_input}, suspend_milliseconds: {suspend_milliseconds}, idle_detection_milliseconds: {idle_detection_milliseconds}",
@@ -91,7 +77,7 @@ impl IdleDetector {
 
             if has_been_idle(
                 idle_detection_milliseconds.into(),
-                ms_since_user_input.into(),
+                ms_since_user_input,
                 suspend_milliseconds,
             ) {
                 if idle_detection_enabled.load(Ordering::Relaxed) {

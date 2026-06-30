@@ -1,5 +1,21 @@
-//! Linux OS-layer implementation: the `GtkStatusIcon` system tray. The break-window
-//! GUI and the display-backend constructor (`create_display`) are added in later
-//! steps.
+//! Linux OS-layer implementation: the `GtkStatusIcon` system tray and the
+//! display-backend constructor. The break-window GUI is added in a later step.
 
 pub mod tray;
+
+use crate::platform::display::DisplayBackend;
+
+/// Build the display backend for this session. Cargo features decide which
+/// backends are compiled in; when more than one is present, runtime detection
+/// picks among them. Today only X11 is implemented (it also covers Wayland
+/// sessions via `XWayland`).
+pub fn create_display() -> Box<dyn DisplayBackend> {
+    // A `#[cfg(feature = "wayland")]` arm that picks Wayland vs X11 at runtime
+    // slots in here once a Wayland backend exists.
+    #[cfg(feature = "x11")]
+    {
+        Box::new(crate::platform::display::x11::X11Backend::connect())
+    }
+    #[cfg(not(feature = "x11"))]
+    compile_error!("enable at least one display backend (the `x11` feature)");
+}

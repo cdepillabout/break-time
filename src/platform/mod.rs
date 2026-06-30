@@ -8,6 +8,7 @@
 //!   save/restore, and window enumeration. X11 today; Wayland/Quartz later.
 //!   (Added in a later step.)
 
+pub mod display;
 pub mod os;
 
-pub use os::{IsIdleDetectorEnabled, TrayImpl};
+pub use os::{create_display, IsIdleDetectorEnabled, TrayImpl};

@@ -33,3 +33,12 @@ tokio = { version = "1.52.3", features = ["rt-multi-thread"] }
 toml = "0.8"
 x11rb = { version = "0.13.2", features = ["screensaver"] }
 yup-oauth2 = "12.1.2"
+
+[features]
+# Display-server backends compiled into the binary. `default` builds everything
+# valid for the host OS; a lean single-backend build can drop the rest.
+default = ["x11"]
+x11 = []
+# Placeholder for a future native Wayland backend (X11 covers Wayland via
+# XWayland for now).
+wayland = []

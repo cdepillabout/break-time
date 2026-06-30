@@ -11,6 +11,8 @@
 pub mod linux;
 
 #[cfg(target_os = "linux")]
+pub use linux::create_display;
+#[cfg(target_os = "linux")]
 pub use linux::tray::{IsIdleDetectorEnabled, Tray as TrayImpl};
 
 // macOS arm (NSStatusItem tray, Cocoa break window, Quartz display backend) is
