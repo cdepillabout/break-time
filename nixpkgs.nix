@@ -20,16 +20,14 @@ let
         buildInputs = with final; [
           glib
           gtk3
-          openssl
         ];
 
         nativeBuildInputs = with final; [
           pkg-config
-          python3 # needed for Rust xcb package
-          wrapGAppsHook
+          wrapGAppsHook3
         ];
 
-        cargoSha256 = "0q6xdsd2bxc6y7d1f4c7i1a2fsh0wqmpxvp8397zmdqnqaszk588";
+        cargoHash = "sha256-jk98WHt4Ia/zLEI1zGXwNqxFwLGe4J0S5L/7mTQ+hEk=";
       };
 
     # This is a development shell.  It should be run with nix-shell.  It

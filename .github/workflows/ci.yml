@@ -11,23 +11,17 @@ jobs:
     name: rust cargo / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
+      # Use the same nix-shell as the dev machines so CI builds with the exact
+      # pinned toolchain (rustc/clippy/rustfmt) and system libraries (GTK,
+      # pkg-config) — no separate toolchain action or apt install needed.
+      - uses: cachix/install-nix-action@v30
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-
-      - name: Update apt packages
-        run: sudo apt-get update
-
-      - name: Install Required System Packages
-        run: sudo apt-get install libgtk-3-dev libxcb-screensaver0-dev libxcb-randr0-dev
+          nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Cache cargo
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -36,42 +30,19 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run cargo check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
+        run: nix-shell --run 'cargo check'
 
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+        run: nix-shell --run 'cargo build'
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: nix-shell --run 'cargo test'
 
       - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+        run: nix-shell --run 'cargo clippy -- -D warnings'
 
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: nix-shell --run 'cargo fmt --all -- --check'
 
-  nix:
-    name: nix / ubuntu-latest
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-
-    - uses: cachix/install-nix-action@v12
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-
-    - run: nix-build
-
-    - run: nix-build shell.nix
+      - name: build with nix
+        run: nix-build
