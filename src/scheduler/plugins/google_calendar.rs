@@ -43,6 +43,8 @@ impl CalFetcher {
 
         let token_path = google_cal_dir_path.join(&email);
 
+        println!("Trying to set up Google Calendar OAuth for {email}.");
+
         let hub: CalHub = create_hub(&token_path).await?;
 
         let calendar_ids = get_all_calendar_ids(&hub).await;
