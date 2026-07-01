@@ -54,8 +54,9 @@ pub trait DisplayBackend {
 
     /// The currently-active window, so it can be re-focused when the break ends.
     /// `None` if there is no active window or it cannot be determined.
-    // Consumed by the Linux break window; the macOS break window does not yet
-    // restore focus, so these are (temporarily) dead there.
+    // Consumed by the Linux break window. macOS restores focus differently — it
+    // reactivates the previously-frontmost *app* via `NSWorkspace` in its own
+    // break window — so this window-id-based API is unused there.
     #[cfg_attr(target_os = "macos", allow(dead_code))]
     fn save_active_window(&self) -> Option<WindowRef>;
 

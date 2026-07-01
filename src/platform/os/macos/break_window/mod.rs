@@ -19,9 +19,9 @@ use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSApplication, NSBackingStoreType, NSColor, NSFont, NSScreen,
-    NSTextAlignment, NSTextField, NSWindow, NSWindowCollectionBehavior,
-    NSWindowStyleMask,
+    NSApplication, NSApplicationActivationOptions, NSBackingStoreType, NSColor,
+    NSFont, NSRunningApplication, NSScreen, NSTextAlignment, NSTextField,
+    NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask, NSWorkspace,
 };
 use objc2_core_graphics::CGShieldingWindowLevel;
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString, NSTimer};
@@ -46,12 +46,20 @@ struct BreakState {
     duration: Duration,
     app_sender: AppSender,
     ended: Cell<bool>,
+    /// The app that was frontmost before the break, reactivated on end so focus
+    /// returns to it. macOS restores the *app*, not a specific window (which
+    /// would need the Accessibility API).
+    previous_app: Option<Retained<NSRunningApplication>>,
 }
 
 pub fn start_break(config: &Config, app_sender: AppSender) {
     let mtm = MainThreadMarker::new()
         .expect("start_break must run on the main thread");
     let app = NSApplication::sharedApplication(mtm);
+
+    // Remember what was frontmost before we cover the screen, so focus can
+    // return to it on break end. Capture this before activating our own app.
+    let previous_app = NSWorkspace::sharedWorkspace().frontmostApplication();
 
     let mut windows = Vec::new();
     let mut labels = Vec::new();
@@ -77,6 +85,7 @@ pub fn start_break(config: &Config, app_sender: AppSender) {
         ),
         app_sender,
         ended: Cell::new(false),
+        previous_app,
     });
 
     // Paint the initial time immediately (the first tick is TICK_INTERVAL away).
@@ -123,6 +132,14 @@ fn end_break(state: &BreakState, timer: std::ptr::NonNull<NSTimer>) {
     unsafe { timer.as_ref().invalidate() };
     for window in &state.windows {
         window.close();
+    }
+    // Return focus to whatever was frontmost before the break.
+    if let Some(previous_app) = &state.previous_app {
+        // Deprecated in macOS 14 (superseded by `activate`) but widely
+        // compatible and sufficient here.
+        #[allow(deprecated)]
+        previous_app
+            .activateWithOptions(NSApplicationActivationOptions::empty());
     }
     state
         .app_sender
