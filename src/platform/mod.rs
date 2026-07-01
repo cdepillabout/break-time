@@ -11,4 +11,7 @@
 pub mod display;
 pub mod os;
 
-pub use os::{create_display, start_break, IsIdleDetectorEnabled, TrayImpl};
+pub use os::{
+    channel, create_display, quit, run_main_loop, start_break, AppSender,
+    IsIdleDetectorEnabled, TrayImpl,
+};

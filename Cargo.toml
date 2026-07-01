@@ -12,33 +12,71 @@ categories = ["gui"]
 default-run = "break-time"
 
 [dependencies]
-cairo-rs = { version = "0.18", features = ["png"] }
+# Cross-platform core (no GUI / display-server / platform deps here).
 chrono = "0.4"
 clap = { version = "4.6.1", features = ["derive"] }
 directories = "6.0.0"
+indoc = "2"
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0"
+toml = "0.8"
+
+# Google Calendar meeting-detection plugin — a heavy async stack (tokio + hyper
+# + rustls), so it lives behind the `google-calendar` feature and a lean build
+# (e.g. the first macOS port) can drop it entirely.
+google-calendar3 = { version = "7.0.0", optional = true }
+yup-oauth2 = { version = "12.1.2", optional = true }
+tokio = { version = "1.52.3", features = ["rt-multi-thread"], optional = true }
+# `ring` crypto provider instead of rustls's default `aws-lc-rs` (which needs
+# cmake to build); otherwise the standard rustls feature set.
+rustls = { version = "0.23.41", default-features = false, features = ["ring", "std", "tls12"], optional = true }
+
+# Linux: the GTK3 GUI stack (break window + tray) and the pure-Rust X11 display
+# backend. None of these are linked on other targets.
+[target.'cfg(target_os = "linux")'.dependencies]
+cairo-rs = { version = "0.18", features = ["png"] }
 gdk = "0.18"
 gdk-pixbuf = "0.18"
 gio = "0.18"
 glib = "0.18"
-google-calendar3 = "7.0.0"
 gtk = { version = "0.18", features = ["v3_24"] }
-indoc = "2"
 pango = "0.18"
-# `ring` crypto provider instead of rustls's default `aws-lc-rs` (which needs
-# cmake to build); otherwise the standard rustls feature set.
-rustls = { version = "0.23.41", default-features = false, features = ["ring", "std", "tls12"] }
-serde = { version = "^1.0", features = ["derive"] }
-serde_json = "^1.0"
-tokio = { version = "1.52.3", features = ["rt-multi-thread"] }
-toml = "0.8"
-x11rb = { version = "0.13.2", features = ["screensaver"] }
-yup-oauth2 = "12.1.2"
+x11rb = { version = "0.13.2", features = ["screensaver"], optional = true }
+
+# macOS: native Cocoa / Quartz via the objc2 ecosystem (break window, run loop,
+# and — in later commits — the CGEventTap lock, idle detection, and tray).
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = [
+    "NSApplication",
+    "NSResponder",
+    "NSWindow",
+    "NSView",
+    "NSControl",
+    "NSTextField",
+    "NSColor",
+    "NSScreen",
+    "NSGraphics",
+    "NSText",
+] }
+objc2-foundation = { version = "0.3", features = [
+    "NSString",
+    "NSGeometry",
+    "NSArray",
+    "NSThread",
+    "NSTimer",
+] }
+objc2-core-graphics = { version = "0.3", features = ["CGWindowLevel"] }
 
 [features]
-# Display-server backends compiled into the binary. `default` builds everything
-# valid for the host OS; a lean single-backend build can drop the rest.
-default = ["x11"]
-x11 = []
-# Placeholder for a future native Wayland backend (X11 covers Wayland via
-# XWayland for now).
+# `default` builds everything valid for the host OS. On Linux that is the X11
+# backend plus Google Calendar; `x11` is inert on macOS (x11rb is a Linux-only
+# dependency), so the same default is harmless there.
+default = ["x11", "google-calendar"]
+# Compile in the X11 display backend (Linux; also covers Wayland via XWayland).
+x11 = ["dep:x11rb"]
+# Placeholder for a future native Wayland backend.
 wayland = []
+# The Google Calendar meeting-detection plugin (see the dependency block above).
+google-calendar = ["dep:google-calendar3", "dep:yup-oauth2", "dep:tokio", "dep:rustls"]

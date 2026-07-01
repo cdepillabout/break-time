@@ -1,6 +1,7 @@
 //! Linux OS-layer implementation: the `GtkStatusIcon` system tray, the GTK
 //! break-window GUI, and the display-backend constructor.
 
+pub mod app;
 pub mod break_window;
 pub mod tray;
 

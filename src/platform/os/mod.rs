@@ -1,23 +1,29 @@
 //! OS-layer selection (compile time). Each OS module provides the concrete tray
-//! type (re-exported as `TrayImpl`) and, in later steps, the break-window entry
-//! point and the display-backend constructor.
+//! type (re-exported as `TrayImpl`), the break-window entry point
+//! (`start_break`), the display-backend constructor (`create_display`), and the
+//! app runtime (`app`: the main loop + `Msg` channel).
 //!
-//! There is intentionally no `Os` trait or `OsImpl` struct yet: with a single OS
-//! there is no polymorphism to justify one, so selection is expressed by
-//! `#[cfg(target_os)]`-gated re-exports of concrete types/functions. A trait can
-//! be introduced later if a second OS makes it pull its weight.
+//! There is intentionally no `Os` trait or `OsImpl` struct: with the OS chosen
+//! at compile time there is no polymorphism to justify one, so selection is
+//! expressed by `#[cfg(target_os)]`-gated re-exports of concrete types and
+//! functions.
 
 #[cfg(target_os = "linux")]
 pub mod linux;
 
-#[cfg(target_os = "linux")]
-pub use linux::create_display;
-#[cfg(target_os = "linux")]
-pub use linux::start_break;
-#[cfg(target_os = "linux")]
-pub use linux::tray::{IsIdleDetectorEnabled, Tray as TrayImpl};
+#[cfg(target_os = "macos")]
+pub mod macos;
 
-// macOS arm (NSStatusItem tray, Cocoa break window, Quartz display backend) is
-// added alongside the macOS sketches:
-//   #[cfg(target_os = "macos")] pub mod macos;
-//   #[cfg(target_os = "macos")] pub use macos::tray::{IsIdleDetectorEnabled, Tray as TrayImpl};
+#[cfg(target_os = "linux")]
+pub use linux::{
+    app::{channel, quit, run_main_loop, AppSender},
+    create_display, start_break,
+    tray::{IsIdleDetectorEnabled, Tray as TrayImpl},
+};
+
+#[cfg(target_os = "macos")]
+pub use macos::{
+    app::{channel, quit, run_main_loop, AppSender},
+    create_display, start_break,
+    tray::{IsIdleDetectorEnabled, Tray as TrayImpl},
+};

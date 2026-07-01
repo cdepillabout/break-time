@@ -1,7 +1,8 @@
 //! Display-server abstraction (the axis that owns input and windows): idle
-//! detection, active-window save/restore, and window enumeration. Backends are
-//! compiled in by cargo feature (`x11`, later `wayland`) and, when more than one
-//! is present, chosen at runtime. X11 today; Wayland/Quartz later.
+//! detection, active-window save/restore, and window enumeration. On Linux the
+//! backends are compiled in by cargo feature (`x11`, later `wayland`) and, when
+//! more than one is present, chosen at runtime; on macOS there is exactly one,
+//! `quartz`, selected by `target_os`. X11 and Quartz today; Wayland later.
 //!
 //! The trait grows one method per migrated consumer rather than landing
 //! fully-formed, so there is never an unused/stub method.
@@ -11,8 +12,11 @@
 //! `CGEventTap` tied to the native break windows — i.e. it is coupled to the
 //! break-window presentation on both platforms, so it lives in the OS layer.
 
-#[cfg(feature = "x11")]
+#[cfg(all(target_os = "linux", feature = "x11"))]
 pub mod x11;
+
+#[cfg(target_os = "macos")]
+pub mod quartz;
 
 use std::time::Duration;
 
@@ -50,10 +54,14 @@ pub trait DisplayBackend {
 
     /// The currently-active window, so it can be re-focused when the break ends.
     /// `None` if there is no active window or it cannot be determined.
+    // Consumed by the Linux break window; the macOS break window does not yet
+    // restore focus, so these are (temporarily) dead there.
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     fn save_active_window(&self) -> Option<WindowRef>;
 
     /// Re-focus a window previously returned by
     /// [`save_active_window`](Self::save_active_window). Best-effort: failures
     /// are logged, not returned.
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     fn restore_active_window(&self, win: WindowRef);
 }

@@ -32,6 +32,9 @@
 mod config;
 mod opts;
 mod platform;
+// `prelude` re-exports the Linux GTK break-window prelude; it is only used by the
+// Linux tray, so it is Linux-only.
+#[cfg(target_os = "linux")]
 mod prelude;
 mod scheduler;
 
@@ -57,7 +60,7 @@ pub enum Msg {
 
 fn handle_msg_recv(
     config: &Config,
-    sender: glib::Sender<Msg>,
+    sender: platform::AppSender,
     scheduler_outer_sender: &Sender<scheduler::Msg>,
     scheduler_inner_sender: &Sender<scheduler::InnerMsg>,
     tray: &mut Tray,
@@ -74,7 +77,7 @@ fn handle_msg_recv(
             scheduler_inner_sender.send(scheduler::InnerMsg::Pause).expect("TODO: figure out what to do about channels potentially failing");
         }
         Msg::Quit => {
-            gtk::main_quit();
+            platform::quit();
         }
         Msg::StartBreak => {
             println!("starting break");
@@ -103,14 +106,10 @@ fn handle_msg_recv(
 }
 
 pub fn run(config: Config) {
-    gtk::init().expect("Could not initialize GTK");
-
-    // `MainContext::channel` is deprecated in glib 0.18 (removed in 0.20) in favour of
-    // async-channel + `spawn_future_local`.  Migrating the synchronous `Msg`/`Message` plumbing to
-    // async channels is deferred to a later glib/GTK upgrade; suppress the deprecation for now.
-    #[allow(deprecated)]
-    let (sender, receiver) =
-        glib::MainContext::channel(glib::Priority::DEFAULT);
+    // `platform::channel` initializes the GUI toolkit (Linux) and creates the
+    // app message channel; `platform::run_main_loop` drives the platform's main
+    // loop, dispatching each `Msg` on the main thread until `platform::quit`.
+    let (sender, receiver) = platform::channel();
 
     let mut tray = Tray::run(&config, sender.clone());
 
@@ -118,7 +117,7 @@ pub fn run(config: Config) {
     let (scheduler_outer_sender, scheduler_inner_sender) =
         Scheduler::run(&config, sender.clone());
 
-    receiver.attach(None, move |msg| {
+    platform::run_main_loop(receiver, move |msg| {
         handle_msg_recv(
             &config,
             sender.clone(),
@@ -127,12 +126,10 @@ pub fn run(config: Config) {
             &mut tray,
             msg,
         );
-        glib::ControlFlow::Continue
     });
-
-    gtk::main();
 }
 
+#[cfg(feature = "google-calendar")]
 pub fn run_google_calendar_command(
     config: &Config,
     google_calendar_command: opts::GoogleCalendar,
@@ -157,7 +154,16 @@ pub fn default_main() {
     match opts.cmd {
         None => run(config),
         Some(opts::Command::GoogleCalendar(google_calendar_command)) => {
+            #[cfg(feature = "google-calendar")]
             run_google_calendar_command(&config, google_calendar_command);
+            #[cfg(not(feature = "google-calendar"))]
+            {
+                let _ = (&config, google_calendar_command);
+                eprintln!(
+                    "This build of break-time does not include Google Calendar \
+                     support (the `google-calendar` cargo feature is disabled)."
+                );
+            }
         }
     }
 }

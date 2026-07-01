@@ -1,6 +1,8 @@
+#[cfg(feature = "google-calendar")]
 pub mod google_calendar;
 mod window_titles;
 
+#[cfg(feature = "google-calendar")]
 pub use google_calendar::GoogleCalendar;
 pub use window_titles::WindowTitles;
 

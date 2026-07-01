@@ -20,13 +20,24 @@ pub enum Msg {
 pub struct Plugins(Vec<Box<dyn Plugin>>);
 
 impl Plugins {
+    // Without the google-calendar plugin there is no fallible step, so the
+    // `Result` looks unnecessary in that build; it is required in the default
+    // (google-calendar) build.
+    #[cfg_attr(
+        not(feature = "google-calendar"),
+        allow(clippy::unnecessary_wraps)
+    )]
     fn new(config: &Config) -> Result<Self, ()> {
         let window_title_plugin = plugins::WindowTitles::new(config);
-        let google_calendar_plugin = plugins::GoogleCalendar::new(config)?;
-        let all_plugins: Vec<Box<dyn Plugin>> = vec![
-            Box::new(window_title_plugin),
-            Box::new(google_calendar_plugin),
-        ];
+        // `mut` is only needed when the google-calendar plugin is pushed below.
+        #[allow(unused_mut)]
+        let mut all_plugins: Vec<Box<dyn Plugin>> =
+            vec![Box::new(window_title_plugin)];
+        #[cfg(feature = "google-calendar")]
+        {
+            let google_calendar_plugin = plugins::GoogleCalendar::new(config)?;
+            all_plugins.push(Box::new(google_calendar_plugin));
+        }
         Ok(Self(all_plugins))
     }
 
@@ -80,7 +91,7 @@ enum State {
 
 pub struct Scheduler {
     idle_detection_enabled: Arc<AtomicBool>,
-    sender: glib::Sender<super::Msg>,
+    sender: crate::platform::AppSender,
     plugins: Plugins,
     time_until_break: Duration,
     break_ending_receiver: Receiver<Msg>,
@@ -97,7 +108,7 @@ impl Scheduler {
     pub fn new(
         config: &Config,
         idle_detection_enabled: Arc<AtomicBool>,
-        sender: glib::Sender<super::Msg>,
+        sender: crate::platform::AppSender,
         break_ending_receiver: Receiver<Msg>,
         restart_wait_time_receiver: Receiver<InnerMsg>,
     ) -> Result<Self, ()> {
@@ -116,7 +127,7 @@ impl Scheduler {
 
     pub fn run(
         config: &Config,
-        sender: glib::Sender<super::Msg>,
+        sender: crate::platform::AppSender,
     ) -> (Sender<Msg>, Sender<InnerMsg>) {
         let (sched_break_ending_sender, sched_break_ending_receiver) =
             channel();
