@@ -27,7 +27,7 @@ let
           wrapGAppsHook3
         ];
 
-        cargoHash = "sha256-jk98WHt4Ia/zLEI1zGXwNqxFwLGe4J0S5L/7mTQ+hEk=";
+        cargoHash = "sha256-a4i6+zlE9RI1uR0i0nwsTxYHkWZSADA64LsVn8ud4ps=";
       };
 
     # This is a development shell.  It should be run with nix-shell.  It
