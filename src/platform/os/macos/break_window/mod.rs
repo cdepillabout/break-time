@@ -32,7 +32,7 @@
 use std::cell::{Cell, RefCell};
 use std::ptr::NonNull;
 use std::rc::Rc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime};
 
 use block2::RcBlock;
 use objc2::rc::Retained;
@@ -92,7 +92,11 @@ struct BreakState {
     windows: Vec<Retained<BreakWindow>>,
     time_labels: Vec<Retained<NSTextField>>,
     hint_labels: Vec<Retained<NSTextField>>,
-    start: Instant,
+    /// Break start in wall-clock time (like the Linux break window), NOT
+    /// `Instant`: on macOS `Instant` freezes during system sleep, which would
+    /// make a break suspended mid-way resume where it left off. Wall time lets
+    /// the suspend run the break down — being away IS the break.
+    start: SystemTime,
     duration: Duration,
     app_sender: AppSender,
     ended: Cell<bool>,
@@ -151,7 +155,7 @@ pub fn start_break(config: &Config, app_sender: AppSender) {
         windows,
         time_labels,
         hint_labels,
-        start: Instant::now(),
+        start: SystemTime::now(),
         duration: Duration::from_secs(
             config.settings.break_duration_seconds.into(),
         ),
@@ -212,13 +216,19 @@ fn on_key_down(state: &BreakState, event: NonNull<NSEvent>) -> *mut NSEvent {
     std::ptr::null_mut()
 }
 
+/// Wall-clock time since the break started. A backwards clock jump makes
+/// `SystemTime::elapsed` fail; report the full duration in that case so the
+/// break simply ends (the Linux break window resolves the same anomaly the
+/// same way).
+fn elapsed(state: &BreakState) -> Duration {
+    state.start.elapsed().unwrap_or(state.duration)
+}
+
 fn tick(state: &BreakState, timer: NonNull<NSTimer>) {
     if state.ended.get() {
         return;
     }
-    if state.start.elapsed() >= state.duration
-        || state.presses_remaining.get() == 0
-    {
+    if elapsed(state) >= state.duration || state.presses_remaining.get() == 0 {
         end_break(state, timer);
     } else {
         refresh_time(state);
@@ -226,7 +236,7 @@ fn tick(state: &BreakState, timer: NonNull<NSTimer>) {
 }
 
 fn refresh_time(state: &BreakState) {
-    let remaining = state.duration.saturating_sub(state.start.elapsed());
+    let remaining = state.duration.saturating_sub(elapsed(state));
     let total_secs = remaining.as_secs();
     let text = format!("{:02}:{:02}", total_secs / 60, total_secs % 60);
     let ns_text = NSString::from_str(&text);
