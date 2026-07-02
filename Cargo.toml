@@ -69,11 +69,15 @@ objc2-app-kit = { version = "0.3", features = [
     "NSWindow",
     "NSWorkspace",
 ] }
+objc2-core-audio = "0.3"
+objc2-core-foundation = "0.3"
 objc2-core-graphics = { version = "0.3", features = [
     "CGEventSource",
     "CGEventTypes",
+    "CGWindow",
     "CGWindowLevel",
 ] }
+objc2-core-media-io = "0.3"
 objc2-foundation = { version = "0.3", features = [
     "NSArray",
     "NSGeometry",

@@ -233,6 +233,10 @@ fn browser_title_contains(
 }
 
 impl Plugin for WindowTitles {
+    fn name(&self) -> &'static str {
+        "window_titles"
+    }
+
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
         let custom_error =
             std::io::Error::other("TODO: change this to an actual error");

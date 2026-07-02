@@ -408,6 +408,10 @@ fn filter_event(event: &Event) -> bool {
 }
 
 impl Plugin for GoogleCalendar {
+    fn name(&self) -> &'static str {
+        "google_calendar"
+    }
+
     fn can_break_now(&self) -> Result<CanBreak, Box<dyn std::error::Error>> {
         self.can_break().map_err(|google_cal_err| {
             Box::new(google_cal_err) as Box<dyn std::error::Error>

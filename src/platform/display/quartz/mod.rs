@@ -1,15 +1,24 @@
 //! Quartz (macOS) display backend.
 //!
-//! Idle detection is implemented (via `CGEventSource`). Window enumeration and
-//! active-window save/restore are still STUBS: enumeration lands with macOS
-//! meeting detection (`CGWindowListCopyWindowInfo`), and focus restore is done
-//! app-wise by the macOS break window through `NSWorkspace` instead (see the
-//! note on the trait). The neutral stub values keep the window-title plugin
-//! inert — never vetoing a break — rather than misbehaving.
+//! Idle detection is implemented (via `CGEventSource`), and
+//! [`visible_app_names`] provides the owner-name window enumeration macOS
+//! meeting detection uses. The *trait's* X11-shaped `list_windows`/`WindowInfo`
+//! stays a stub by decision: reading other apps' window **titles** requires the
+//! Screen Recording permission on macOS, so the macOS meeting plugins are built
+//! on permission-free owner names + camera/mic-in-use instead (see
+//! `scheduler::plugins`). Active-window save/restore is likewise unused here —
+//! focus restore is done app-wise by the macOS break window through
+//! `NSWorkspace` (see the note on the trait).
+
+#![allow(unsafe_code)]
 
 use std::time::Duration;
 
-use objc2_core_graphics::{CGEventSource, CGEventSourceStateID, CGEventType};
+use objc2_core_foundation::{CFDictionary, CFString, CFType};
+use objc2_core_graphics::{
+    kCGNullWindowID, kCGWindowOwnerName, CGEventSource, CGEventSourceStateID,
+    CGEventType, CGWindowListCopyWindowInfo, CGWindowListOption,
+};
 
 use crate::platform::display::{DisplayBackend, WindowInfo, WindowRef};
 
@@ -52,8 +61,10 @@ impl DisplayBackend for QuartzBackend {
     }
 
     fn list_windows(&self) -> Result<Vec<WindowInfo>, ()> {
-        // No window enumeration yet: an empty list means the window-title plugin
-        // sees no meeting windows and always allows a break.
+        // Deliberately empty (see the module docs): the X11-shaped WindowInfo
+        // does not fit macOS, and the macOS meeting plugins use
+        // `visible_app_names` + camera/mic-in-use instead. An empty list means
+        // the (Linux) window-title plugin would always allow a break.
         Ok(Vec::new())
     }
 
@@ -62,4 +73,38 @@ impl DisplayBackend for QuartzBackend {
     }
 
     fn restore_active_window(&self, _win: WindowRef) {}
+}
+
+/// The owner (application) names of all on-screen windows, deduplicated —
+/// e.g. `["Google Chrome", "Terminal", "zoom.us"]`. Owner names are readable
+/// without any permission (unlike window titles, which need Screen Recording).
+/// `Err` means the window list itself could not be read.
+pub fn visible_app_names() -> Result<Vec<String>, ()> {
+    let list = CGWindowListCopyWindowInfo(
+        CGWindowListOption::OptionOnScreenOnly
+            | CGWindowListOption::ExcludeDesktopElements,
+        kCGNullWindowID,
+    )
+    .ok_or(())?;
+
+    let mut names = Vec::new();
+    for i in 0..list.count() {
+        // Each element of a CGWindowList is documented to be a CFDictionary
+        // describing one window.
+        let dict = unsafe {
+            &*list
+                .value_at_index(i)
+                .cast::<CFDictionary<CFString, CFType>>()
+        };
+        if let Some(name) =
+            dict.get(unsafe { kCGWindowOwnerName }).and_then(|owner| {
+                owner.downcast_ref::<CFString>().map(CFString::to_string)
+            })
+        {
+            names.push(name);
+        }
+    }
+    names.sort();
+    names.dedup();
+    Ok(names)
 }

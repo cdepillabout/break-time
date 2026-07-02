@@ -5,6 +5,7 @@
 
 pub mod app;
 pub mod break_window;
+pub mod media;
 pub mod tray;
 
 pub use break_window::start_break;

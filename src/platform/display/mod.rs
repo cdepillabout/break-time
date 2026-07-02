@@ -26,11 +26,16 @@ use std::time::Duration;
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct WindowRef(pub u32);
 
-/// One window's properties, as needed by the cross-platform meeting-detection
+/// One window's properties, as needed by the window-title meeting-detection
 /// predicates. Each field is independently fallible: on X11 each comes from a
 /// separate property request that can fail or be absent. The `Err` case is kept
 /// (rather than flattened to an empty string) because the predicates treat a
 /// failed read as "can break".
+// The field set is X11-shaped (WM_CLASS halves, _NET_WM_NAME), so only the
+// Linux window-title plugin consumes this; macOS meeting detection uses
+// camera/mic-in-use + owner names instead (see `display::quartz`), leaving
+// this dead there.
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 #[derive(Clone, Debug)]
 pub struct WindowInfo {
     #[allow(dead_code)]
@@ -50,6 +55,9 @@ pub trait DisplayBackend {
     /// All top-level windows with the properties meeting detection needs. `Err`
     /// signals that enumeration failed (distinct from "no windows"); the caller
     /// treats that as "do not break right now".
+    // Consumed only by the Linux window-title plugin (see the `WindowInfo`
+    // note); dead on macOS.
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     fn list_windows(&self) -> Result<Vec<WindowInfo>, ()>;
 
     /// The currently-active window, so it can be re-focused when the break ends.

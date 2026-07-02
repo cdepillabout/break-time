@@ -28,11 +28,20 @@ impl Plugins {
         allow(clippy::unnecessary_wraps)
     )]
     fn new(config: &Config) -> Result<Self, ()> {
-        let window_title_plugin = plugins::WindowTitles::new(config);
-        // `mut` is only needed when the google-calendar plugin is pushed below.
+        // Meeting detection differs per OS: window-title matching on Linux
+        // (X11); camera/mic-in-use + known-meeting-app windows on macOS.
+        // (`mut` is only needed when the google-calendar plugin is pushed
+        // below.)
+        #[cfg(target_os = "linux")]
         #[allow(unused_mut)]
         let mut all_plugins: Vec<Box<dyn Plugin>> =
-            vec![Box::new(window_title_plugin)];
+            vec![Box::new(plugins::WindowTitles::new(config))];
+        #[cfg(target_os = "macos")]
+        #[allow(unused_mut)]
+        let mut all_plugins: Vec<Box<dyn Plugin>> = vec![
+            Box::new(plugins::CameraMic::new(config)),
+            Box::new(plugins::MeetingApps::new(config)),
+        ];
         #[cfg(feature = "google-calendar")]
         {
             let google_calendar_plugin = plugins::GoogleCalendar::new(config)?;
@@ -52,6 +61,18 @@ impl Plugins {
             plugin: &dyn Plugin,
         ) -> (Option<CanBreak>, Vec<Box<dyn std::error::Error>>) {
             let res_can_break = plugin.can_break_now();
+            // Log every plugin's verdict — which one vetoed (or errored) is
+            // otherwise invisible in the combined result.
+            match &res_can_break {
+                Ok(can_break) => println!(
+                    "plugin {}: can_break = {:?}",
+                    plugin.name(),
+                    can_break
+                ),
+                Err(err) => {
+                    println!("plugin {}: error: {}", plugin.name(), err);
+                }
+            }
             match res_can_break {
                 Err(err) => {
                     err_accum.push(err);
