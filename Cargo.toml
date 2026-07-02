@@ -63,7 +63,11 @@ objc2-app-kit = { version = "0.3", features = [
     "NSWindow",
     "NSWorkspace",
 ] }
-objc2-core-graphics = { version = "0.3", features = ["CGWindowLevel"] }
+objc2-core-graphics = { version = "0.3", features = [
+    "CGEventSource",
+    "CGEventTypes",
+    "CGWindowLevel",
+] }
 objc2-foundation = { version = "0.3", features = [
     "NSArray",
     "NSGeometry",

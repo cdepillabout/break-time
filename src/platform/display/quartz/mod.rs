@@ -1,15 +1,22 @@
 //! Quartz (macOS) display backend.
 //!
-//! STUBS for the initial MVP: idle detection, window enumeration, and
-//! active-window save/restore land in later commits (via
-//! `CGEventSourceSecondsSinceLastEventType`, `CGWindowListCopyWindowInfo`, and
-//! `NSWorkspace`). The neutral values returned here keep the scheduler's idle
-//! detector and the window-title plugin inert — never resetting or vetoing a
-//! break — rather than misbehaving.
+//! Idle detection is implemented (via `CGEventSource`). Window enumeration and
+//! active-window save/restore are still STUBS: enumeration lands with macOS
+//! meeting detection (`CGWindowListCopyWindowInfo`), and focus restore is done
+//! app-wise by the macOS break window through `NSWorkspace` instead (see the
+//! note on the trait). The neutral stub values keep the window-title plugin
+//! inert — never vetoing a break — rather than misbehaving.
 
 use std::time::Duration;
 
+use objc2_core_graphics::{CGEventSource, CGEventSourceStateID, CGEventType};
+
 use crate::platform::display::{DisplayBackend, WindowInfo, WindowRef};
+
+/// `kCGAnyInputEventType` — "time since *any* HID input" (keyboard, mouse
+/// movement, clicks, scroll). Defined as `~0` in the CoreGraphics headers but
+/// not exposed as a named constant by `objc2-core-graphics`.
+const ANY_INPUT_EVENT_TYPE: CGEventType = CGEventType(u32::MAX);
 
 pub struct QuartzBackend;
 
@@ -28,9 +35,20 @@ impl Default for QuartzBackend {
 
 impl DisplayBackend for QuartzBackend {
     fn idle_time(&self) -> Duration {
-        // No idle detection yet: report "never idle" so the idle detector never
-        // resets the countdown.
-        Duration::ZERO
+        // Seconds since the last user input (keyboard or pointer) — the direct
+        // macOS analog of the X11 screensaver query, and the same call
+        // Chromium/Electron (and hence Stretchly/BreakTimer) use for idle
+        // time. `CombinedSessionState` scopes the counter to the current login
+        // session, so under fast user switching another user's input does not
+        // count as ours (unlike the hardware-wide `HIDSystemState`).
+        let secs = CGEventSource::seconds_since_last_event_type(
+            CGEventSourceStateID::CombinedSessionState,
+            ANY_INPUT_EVENT_TYPE,
+        );
+        // `try_from_secs_f64` fails on negative/NaN/overflow, none of which the
+        // counter should ever produce; treat them as "not idle" rather than
+        // taking down the idle-detector thread.
+        Duration::try_from_secs_f64(secs).unwrap_or(Duration::ZERO)
     }
 
     fn list_windows(&self) -> Result<Vec<WindowInfo>, ()> {
