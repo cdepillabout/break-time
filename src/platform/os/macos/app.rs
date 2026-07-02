@@ -21,8 +21,11 @@ use std::sync::mpsc::{Receiver, SendError, Sender};
 
 use block2::RcBlock;
 use objc2::MainThreadMarker;
-use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};
-use objc2_foundation::NSTimer;
+use objc2_app_kit::{
+    NSApplication, NSApplicationActivationPolicy, NSEvent,
+    NSEventModifierFlags, NSEventType,
+};
+use objc2_foundation::{NSPoint, NSTimer};
 
 use crate::Msg;
 
@@ -99,4 +102,22 @@ pub fn quit() {
         .expect("quit must be called on the main thread");
     let app = NSApplication::sharedApplication(mtm);
     app.stop(None);
+    // `-stop:` only takes effect after the run loop finishes dispatching an
+    // *event* — and we are called from a timer callback, which is not one. Post
+    // a do-nothing application-defined event so the loop wakes, dispatches it,
+    // notices the stop flag, and actually exits.
+    let wake_event =
+        NSEvent::otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
+            NSEventType::ApplicationDefined,
+            NSPoint::ZERO,
+            NSEventModifierFlags::empty(),
+            0.0,
+            0,
+            None,
+            0,
+            0,
+            0,
+        )
+        .expect("could not create the wake-up event");
+    app.postEvent_atStart(&wake_event, true);
 }
