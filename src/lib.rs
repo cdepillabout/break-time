@@ -147,6 +147,12 @@ pub fn run_google_calendar_command(
 }
 
 pub fn default_main() {
+    // Redirect stdout/stderr to a log file when launched without a terminal
+    // (macOS Spotlight/launchd, where fds 1/2 are wired to /dev/null); a no-op
+    // in a terminal and on Linux. Done first so even config-load failures land
+    // in the log.
+    platform::init_logging();
+
     let opts = opts::Opts::parse_from_args();
 
     let config = Config::load(&opts).expect("Could not load config file.");

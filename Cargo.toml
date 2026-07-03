@@ -47,6 +47,9 @@ x11rb = { version = "0.13.2", features = ["screensaver"], optional = true }
 # and — in later commits — the CGEventTap lock, idle detection, and tray).
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6"
+# POSIX `dup2`, to repoint stdout/stderr at the headless log file (see
+# src/platform/os/macos/logging.rs).
+libc = "0.2"
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", features = [
     "NSApplication",

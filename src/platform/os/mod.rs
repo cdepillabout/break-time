@@ -17,13 +17,13 @@ pub mod macos;
 #[cfg(target_os = "linux")]
 pub use linux::{
     app::{channel, quit, run_main_loop, AppSender},
-    create_display, start_break,
+    create_display, init_logging, start_break,
     tray::{IsIdleDetectorEnabled, Tray as TrayImpl},
 };
 
 #[cfg(target_os = "macos")]
 pub use macos::{
     app::{channel, quit, run_main_loop, AppSender},
-    create_display, start_break,
+    create_display, init_logging, start_break,
     tray::{IsIdleDetectorEnabled, Tray as TrayImpl},
 };

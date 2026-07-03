@@ -73,7 +73,7 @@ let
             "$out/Applications/BreakTime.app/Contents/Info.plist"
         '';
 
-        cargoHash = "sha256-RcRDnCepZ02fRSESPo3cd5GT0WElQj9uZG+ncsleaLQ=";
+        cargoHash = "sha256-jnNqeusJJEzQiWV5YQJPn+s1aYNco3uTwWIDZ2RNGT8=";
       };
 
     # This is a development shell.  It should be run with nix-shell.  It

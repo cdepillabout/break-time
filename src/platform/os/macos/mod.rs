@@ -5,10 +5,12 @@
 
 pub mod app;
 pub mod break_window;
+pub mod logging;
 pub mod media;
 pub mod tray;
 
 pub use break_window::start_break;
+pub use logging::init as init_logging;
 
 use crate::platform::display::DisplayBackend;
 
