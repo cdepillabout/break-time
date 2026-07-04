@@ -10,7 +10,7 @@ pub use break_window::start_break;
 use crate::platform::display::DisplayBackend;
 
 /// No-op on Linux: diagnostic output goes to stdout.
-pub fn init_logging() {}
+pub const fn init_logging() {}
 
 /// Build the display backend for this session. Cargo features decide which
 /// backends are compiled in; when more than one is present, runtime detection

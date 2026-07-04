@@ -7,6 +7,7 @@ use super::config::Config;
 use idle_detector::IdleDetector;
 use plugins::{CanBreak, Plugin};
 
+use std::error::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
@@ -27,7 +28,7 @@ impl Plugins {
         not(feature = "google-calendar"),
         allow(clippy::unnecessary_wraps)
     )]
-    fn new(config: &Config) -> Result<Self, ()> {
+    fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         // Meeting detection differs per OS: window-title matching on Linux
         // (X11); camera/mic-in-use + known-meeting-app windows on macOS.
         // (`mut` is only needed when the google-calendar plugin is pushed
@@ -44,7 +45,9 @@ impl Plugins {
         ];
         #[cfg(feature = "google-calendar")]
         {
-            let google_calendar_plugin = plugins::GoogleCalendar::new(config)?;
+            let google_calendar_plugin =
+                plugins::GoogleCalendar::new(config)
+                    .map_err(|err| Box::new(err) as Box<dyn Error>)?;
             all_plugins.push(Box::new(google_calendar_plugin));
         }
         Ok(Self(all_plugins))
@@ -132,11 +135,11 @@ impl Scheduler {
         sender: crate::platform::AppSender,
         break_ending_receiver: Receiver<Msg>,
         restart_wait_time_receiver: Receiver<InnerMsg>,
-    ) -> Result<Self, ()> {
+    ) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             idle_detection_enabled,
             sender,
-            plugins: Plugins::new(&config)?,
+            plugins: Plugins::new(config)?,
             time_until_break: Duration::from_secs(
                 config.settings.seconds_between_breaks.into(),
             ),
@@ -158,17 +161,33 @@ impl Scheduler {
             Arc::new(AtomicBool::new(config.settings.idle_detection_enabled));
         let idle_detection_enabled_clone = idle_detection_enabled.clone();
         std::thread::spawn(move || {
-            // TODO: Need to actually handle this error.
-            let mut sched = Self::new(
+            let res_sched = Self::new(
                 &config_clone,
                 idle_detection_enabled_clone,
-                sender,
+                sender.clone(),
                 sched_break_ending_receiver,
                 restart_wait_time_receiver,
-            )
-            .expect("Could not initialize plugins.");
-            println!("Scheduler initialized plugins");
-            sched.run_loop();
+            );
+            match res_sched {
+                Ok(mut sched) => {
+                    println!("Scheduler initialized plugins");
+                    sched.run_loop();
+                }
+                Err(err) => {
+                    eprintln!("Could not initialize scheduler: {err}");
+                    let mut source = err.source();
+                    while let Some(err) = source {
+                        eprintln!("  caused by: {err}");
+                        source = err.source();
+                    }
+                    if let Err(send_err) = sender.send(super::Msg::Quit) {
+                        eprintln!(
+                            "Could not ask the app to quit after scheduler \
+                             initialization failed: {send_err}"
+                        );
+                    }
+                }
+            }
         });
         let config_clone = config.clone();
         let restart_wait_time_sender_clone = restart_wait_time_sender.clone();

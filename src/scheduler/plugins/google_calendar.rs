@@ -3,7 +3,7 @@ use super::{CanBreak, Plugin};
 use crate::config::{Config, PluginSettings};
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use google_calendar3::api::{Event, EventExtendedProperties, Scope};
 use google_calendar3::{hyper_rustls, hyper_util, CalendarHub};
@@ -34,12 +34,17 @@ impl CalFetcher {
     async fn new(
         break_time_cache_dir: &Path,
         email: String,
-    ) -> Result<Self, ()> {
+    ) -> Result<Self, InitError> {
         let google_cal_dir_name = Path::new("google-calendar");
         let google_cal_dir_path =
             break_time_cache_dir.join(google_cal_dir_name);
 
-        std::fs::create_dir_all(&google_cal_dir_path).map_err(|_io_err| ())?;
+        std::fs::create_dir_all(&google_cal_dir_path).map_err(|source| {
+            InitError::CreateCacheDir {
+                path: google_cal_dir_path.clone(),
+                source,
+            }
+        })?;
 
         let token_path = google_cal_dir_path.join(&email);
 
@@ -47,7 +52,7 @@ impl CalFetcher {
 
         let hub: CalHub = create_hub(&token_path).await?;
 
-        let calendar_ids = get_all_calendar_ids(&hub).await;
+        let calendar_ids = get_all_calendar_ids(&email, &hub).await?;
 
         Ok(Self {
             email,
@@ -80,6 +85,108 @@ impl CalFetcher {
     }
 }
 
+#[derive(Debug)]
+pub enum InitError {
+    InvalidSettings {
+        message: String,
+    },
+    CreateRuntime {
+        source: std::io::Error,
+    },
+    CreateCacheDir {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    CreateAuthenticator {
+        token_path: PathBuf,
+        source: std::io::Error,
+    },
+    CreateHttpsConnector {
+        source: std::io::Error,
+    },
+    FetchCalendarList {
+        email: String,
+        source: Box<google_calendar3::Error>,
+    },
+    CalendarListMissingItems {
+        email: String,
+    },
+    CalendarListEntryMissingId {
+        email: String,
+    },
+}
+
+impl std::error::Error for InitError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::CreateRuntime { source }
+            | Self::CreateCacheDir { source, .. }
+            | Self::CreateAuthenticator { source, .. }
+            | Self::CreateHttpsConnector { source } => Some(source),
+            Self::FetchCalendarList { source, .. } => Some(source.as_ref()),
+            Self::InvalidSettings { .. }
+            | Self::CalendarListMissingItems { .. }
+            | Self::CalendarListEntryMissingId { .. } => None,
+        }
+    }
+}
+
+impl std::fmt::Display for InitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidSettings { message } => {
+                write!(f, "Google Calendar Plugin: invalid config: {message}")
+            }
+            Self::CreateRuntime { source } => write!(
+                f,
+                "Google Calendar Plugin: could not create async runtime: {source}"
+            ),
+            Self::CreateCacheDir { path, source } => write!(
+                f,
+                "Google Calendar Plugin: could not create cache directory \
+                 {path:?}: {source}"
+            ),
+            Self::CreateAuthenticator { token_path, source } => {
+                write!(
+                    f,
+                    "Google Calendar Plugin: could not initialize OAuth token \
+                     storage at {token_path:?}: {source}"
+                )?;
+                if source.kind() == std::io::ErrorKind::InvalidData {
+                    write!(
+                        f,
+                        ". This can happen when the token file was written by \
+                         an older break-time/yup-oauth2 version; move it aside \
+                         or delete it and restart break-time to authenticate \
+                         again."
+                    )?;
+                }
+                Ok(())
+            }
+            Self::CreateHttpsConnector { source } => write!(
+                f,
+                "Google Calendar Plugin: could not load native TLS roots: \
+                 {source}"
+            ),
+            Self::FetchCalendarList { email, source } => write!(
+                f,
+                "Google Calendar Plugin: could not fetch the calendar list for \
+                 {email}: {source}"
+            ),
+            Self::CalendarListMissingItems { email } => write!(
+                f,
+                "Google Calendar Plugin: Google returned no calendar-list \
+                 items for {email}"
+            ),
+            Self::CalendarListEntryMissingId { email } => write!(
+                f,
+                "Google Calendar Plugin: Google returned a calendar-list entry \
+                 without an id for {email}"
+            ),
+        }
+    }
+}
+
 const GOOGLE_CLIENT_ID: &str =
     "728095687622-mpib9rmdtck7e8ln9egelnns6na0me08.apps.googleusercontent.com";
 
@@ -92,7 +199,9 @@ const GOOGLE_CLIENT_SECRET: &str = "mI7MmEnboy8jdYEBjK9rZ2M2";
 // TODO: Create a datatype to hold all the settings for the GoogleCalendar plugin.
 // Don't try parsing it out manually here.
 #[allow(clippy::let_and_return)]
-fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
+fn get_emails(
+    plugin_settings: &PluginSettings,
+) -> Result<Vec<String>, InitError> {
     let google_cal_settings: &toml::Value =
         match plugin_settings.0.get("google_calendar") {
             // If the "google_calendar" key doesn't exist, then just skip.
@@ -100,11 +209,15 @@ fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
             Some(val) => val,
         };
     let google_cal_settings_table: &toml::value::Table =
-        google_cal_settings.as_table().ok_or(
+        google_cal_settings.as_table().ok_or_else(|| {
             // If the "google_calendar" key exists, but it doesn't contain a table, then throw an
             // error.
-            (),
-        )?;
+            InitError::InvalidSettings {
+                message: String::from(
+                    "plugin.google_calendar must be a TOML table",
+                ),
+            }
+        })?;
     let all_accounts: &toml::Value =
         match google_cal_settings_table.get("accounts") {
             // If the "google_calendar" key exists, but it doesn't have an accounts field, then
@@ -113,7 +226,14 @@ fn get_emails(plugin_settings: &PluginSettings) -> Result<Vec<String>, ()> {
             Some(all_accounts) => all_accounts,
         };
 
-    let all_emails = all_accounts.clone().try_into().map_err(|_err| ());
+    let all_emails = all_accounts.clone().try_into().map_err(|err| {
+        InitError::InvalidSettings {
+            message: format!(
+                "plugin.google_calendar.accounts must be a list of strings: \
+                 {err}"
+            ),
+        }
+    });
 
     // println!("All emails: {:?}", all_emails);
 
@@ -126,11 +246,12 @@ pub struct GoogleCalendar {
 }
 
 impl GoogleCalendar {
-    pub fn new(config: &Config) -> Result<Self, ()> {
+    pub fn new(config: &Config) -> Result<Self, InitError> {
         let break_time_cache_dir = config.cache_dir.clone();
         let emails = get_emails(&config.settings.all_plugin_settings)?;
 
-        let runtime = tokio::runtime::Runtime::new().map_err(|_io_err| ())?;
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|source| InitError::CreateRuntime { source })?;
 
         // Building each fetcher requires `await`ing the OAuth flow and an
         // initial calendar-list fetch, so it has to happen inside the runtime.
@@ -140,7 +261,7 @@ impl GoogleCalendar {
                 fetchers
                     .push(CalFetcher::new(&break_time_cache_dir, email).await?);
             }
-            Ok::<Vec<CalFetcher>, ()>(fetchers)
+            Ok::<Vec<CalFetcher>, InitError>(fetchers)
         })?;
 
         Ok(Self { runtime, fetchers })
@@ -174,7 +295,7 @@ fn application_secret() -> ApplicationSecret {
     }
 }
 
-async fn create_hub(token_path: &Path) -> Result<CalHub, ()> {
+async fn create_hub(token_path: &Path) -> Result<CalHub, InitError> {
     let auth = InstalledFlowAuthenticator::builder(
         application_secret(),
         InstalledFlowReturnMethod::HTTPRedirect,
@@ -182,7 +303,10 @@ async fn create_hub(token_path: &Path) -> Result<CalHub, ()> {
     .persist_tokens_to_disk(token_path)
     .build()
     .await
-    .map_err(|_auth_err| ())?;
+    .map_err(|source| InitError::CreateAuthenticator {
+        token_path: token_path.to_path_buf(),
+        source,
+    })?;
 
     // Pass the `ring` crypto provider explicitly rather than going through
     // `with_native_roots()`, which relies on a process-wide default rustls
@@ -193,7 +317,7 @@ async fn create_hub(token_path: &Path) -> Result<CalHub, ()> {
             .with_provider_and_native_roots(
                 rustls::crypto::ring::default_provider(),
             )
-            .map_err(|_io_err| ())?
+            .map_err(|source| InitError::CreateHttpsConnector { source })?
             .https_or_http()
             .enable_http1()
             .enable_http2()
@@ -206,7 +330,10 @@ async fn create_hub(token_path: &Path) -> Result<CalHub, ()> {
     Ok(CalendarHub::new(client, auth))
 }
 
-async fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
+async fn get_all_calendar_ids(
+    email: &str,
+    hub: &CalHub,
+) -> Result<Vec<String>, InitError> {
     let (_, calendar_list) = hub
         .calendar_list()
         .list()
@@ -214,15 +341,26 @@ async fn get_all_calendar_ids(hub: &CalHub) -> Vec<String> {
         .add_scope(Scope::Event)
         .doit()
         .await
-        .expect("couldn't get a response from calendar_list");
+        .map_err(|source| InitError::FetchCalendarList {
+            email: email.to_string(),
+            source: Box::new(source),
+        })?;
 
-    let calendars = calendar_list
-        .items
-        .expect("There should be some calendars available");
+    let calendars = calendar_list.items.ok_or_else(|| {
+        InitError::CalendarListMissingItems {
+            email: email.to_string(),
+        }
+    })?;
 
     calendars
         .into_iter()
-        .map(|calendar| calendar.id.expect("Calendars should always have ids"))
+        .map(|calendar| {
+            calendar
+                .id
+                .ok_or_else(|| InitError::CalendarListEntryMissingId {
+                    email: email.to_string(),
+                })
+        })
         .collect()
 }
 
@@ -419,9 +557,8 @@ impl Plugin for GoogleCalendar {
     }
 }
 
-pub fn list_events(config: &Config) {
-    let google_calendar = GoogleCalendar::new(config)
-        .expect("Could not initialize Google Calendar.");
+pub fn list_events(config: &Config) -> Result<(), InitError> {
+    let google_calendar = GoogleCalendar::new(config)?;
 
     let event_calendar_lists = google_calendar.runtime.block_on(async {
         let mut event_calendar_lists = vec![];
@@ -447,6 +584,7 @@ pub fn list_events(config: &Config) {
             }
         }
     }
+    Ok(())
 }
 
 async fn get_events(
@@ -484,9 +622,8 @@ async fn get_events(
     events_list
 }
 
-pub fn ignore_event(config: &Config, event_id: &str) {
-    let google_calendar = GoogleCalendar::new(config)
-        .expect("Could not initialize Google Calendar.");
+pub fn ignore_event(config: &Config, event_id: &str) -> Result<(), InitError> {
+    let google_calendar = GoogleCalendar::new(config)?;
 
     google_calendar.runtime.block_on(async {
         for fetcher in &google_calendar.fetchers {
@@ -523,4 +660,5 @@ pub fn ignore_event(config: &Config, event_id: &str) {
             }
         }
     });
+    Ok(())
 }

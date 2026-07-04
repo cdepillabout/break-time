@@ -134,15 +134,22 @@ pub fn run_google_calendar_command(
     config: &Config,
     google_calendar_command: opts::GoogleCalendar,
 ) {
-    match google_calendar_command {
+    let res = match google_calendar_command {
         opts::GoogleCalendar::ListEvents => {
-            scheduler::plugins::google_calendar::list_events(&config);
+            scheduler::plugins::google_calendar::list_events(config)
         }
         opts::GoogleCalendar::IgnoreEvent(opts::IgnoreEvent { event_id }) => {
-            scheduler::plugins::google_calendar::ignore_event(
-                &config, &event_id,
-            );
+            scheduler::plugins::google_calendar::ignore_event(config, &event_id)
         }
+    };
+    if let Err(err) = res {
+        eprintln!("Could not initialize Google Calendar: {err}");
+        let mut source = std::error::Error::source(&err);
+        while let Some(err) = source {
+            eprintln!("  caused by: {err}");
+            source = err.source();
+        }
+        std::process::exit(1);
     }
 }
 
