@@ -1,8 +1,7 @@
-//! macOS meeting detection, primary signal: is the camera or the microphone in
-//! use by any process? Covers native meeting apps *actually in a call* and any
-//! browser-tab meeting (WebRTC always opens the microphone) — the cases the
-//! Linux window-title plugin matches by title, which is not possible
-//! permission-free on macOS. See `platform::os::macos::media` for the queries.
+//! macOS meeting detection: any camera activity or microphone activity from
+//! a process outside the built-in ignore list postpones breaks. This covers
+//! native meeting apps and browser calls without Screen Recording permission.
+//! See `platform::os::macos::media` for the queries.
 
 use super::{CanBreak, Plugin};
 
@@ -34,6 +33,8 @@ impl Plugin for CameraMic {
                 "could not enumerate audio input devices (CoreAudio)",
             )) as Box<dyn std::error::Error>
         })?;
-        Ok(CanBreak::from_bool(!camera && !mic))
+        let can_break = !camera && !mic;
+        println!("camera_mic: decision camera_active={camera} microphone_blocks={mic} can_break={can_break}");
+        Ok(CanBreak::from_bool(can_break))
     }
 }

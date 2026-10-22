@@ -76,6 +76,27 @@ before a break is about to occur, break-time queries all the plugins and asks
 if it is really okay to start a break.  This section explains how the plugins
 work and how to configure them.
 
+#### macOS Camera and Microphone
+
+On macOS, camera or microphone activity postpones breaks. Wispr Flow
+and its recording helper (`com.electron.wispr-flow` and
+`com.electron.wispr-flow.helper`) are on a built-in microphone ignore list, so
+Wispr Flow microphone use alone does not postpone breaks. A meeting app recording at the
+same time still postpones breaks, as does any camera use.
+
+The ignore list matches exact application bundle IDs in
+`src/platform/os/macos/media.rs`. Unidentified recording apps still postpone
+breaks. If macOS cannot provide per-process audio activity, break-time falls
+back to device-level detection, where app exclusions cannot be applied.
+
+Each check logs camera activity, active microphone clients (PID and bundle ID),
+ignore-list decisions, the detection path, and native query failures. To inspect
+current activity without starting the break timer, run from the repository root:
+
+```bash
+nix-shell --run 'cargo test --no-default-features --lib inspect_capture_activity -- --ignored --nocapture'
+```
+
 #### X Window Titles (Video Chat)
 
 The X Window Title plugin checks whether or not there is an X Window with a
